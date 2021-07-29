@@ -60,3 +60,51 @@ Module Functions:
         character or NPC.
 
 """
+# imports
+from world.dice_roller import return_a_roll_sans_crits as rarsc
+
+class MutationException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+# list of mutations, stored in a dict by related ability score (stored in traits)
+_MUTATION_DATA = {
+    # Dex based mutations
+    'extreme_flexibility': {
+        'name': 'Extreme Flexibility',
+        'base': 'Dex',
+        'desc': ("|mExtreme Flexibility|n is a mutation that improves the "
+                 "ability to dodge and block in combat, reduces damage from "
+                 "some grappling attacks, and allows the character to fit in "
+                 "tight locations. This is a prerequisite to the rubber body "
+                 "power."),
+        'prerequisites': None,
+        'starting_score': 'Dex',
+        'range': {'min': 25, 'max': 500}
+    },
+    'rubber_body': {
+        'name': 'Rubber Body',
+        'base': 'Dex',
+        'desc': ("|mRubber Body|n is a mutation that makes the body soft and "
+                 "extremely flexible. Characters with this mutation are "
+                 "resistant to bludgeoning damage and some grappling attacks. "
+                 "Rubber body allows the character to fit in tight locations "
+                 "and in some cases  "
+                 "power."),
+        'prerequisites': {'mutations.extreme_flexibility.actual': 200},
+        'starting_score': 0,
+        'range': {'min': 0, 'max': 500}
+    },
+    'improved_balance': {
+        'name': 'Improved Balance',
+        'base': 'Dex',
+        'desc': ("|mImproved Balance|n is a mutation that makes the character "
+                 "more difficult to knock down, trip, throw, etc.. It also has"
+                 "a minor effect on the footwork skill."),
+        'prerequisites': None,
+        'starting_score': 0,
+        'range': {'min': 0, 'max': 500}
+    },
+    # Str based mutations
+    
+}
