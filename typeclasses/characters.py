@@ -105,12 +105,33 @@ class Character(DefaultCharacter):
                           ('torso', ('chest', 'back', 'waist', 'quiver')), \
                           ('arms', ('shoulders', 'arms', 'hands', 'ring')), \
                           ('legs', ('legs', 'feet')), \
-                          ('weapon', ('main hand', 'off hand', 'two hand', \
-                                      'shield', 'improvised')) )
+                          ('weapon', ('wield1', 'wield2')) )
+        # TODO: Replace the predefined slots below with a function to loop
+        # through limbs and define the slots
+        self.db.slots = {
+            'head': None,
+            'face': None,
+            'ears': None,
+            'neck': None,
+            'chest': None,
+            'back': None,
+            'waist': None,
+            'quiver': None,
+            'shoulders': None,
+            'arms': None,
+            'hands': None,
+            'ring': None,
+            'legs': None,
+            'feet': None,
+            'wield1': None,
+            'wield2': None
+        }
         # Add in info db to store other useful tidbits we'll need
         self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strikes', \
                         'In Combat': False, 'Position': 'standing', \
                         'Wimpy': 100, 'Title': None}
+        # money
+        self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}
         # TODO: Add in character sheet
         # TODO: Add in function for character sheet refresh
         # TODO: Add in progression script

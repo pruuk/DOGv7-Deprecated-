@@ -5,6 +5,7 @@ Generic item classes and their base functions.
 from typeclasses.objects import Object
 from evennia import create_object
 from evennia.prototypes.spawner import spawn
+from world.traits import TraitHandler
 
 class Item(Object):
     """
@@ -25,6 +26,7 @@ class Item(Object):
                                  )))
         self.db.value = self.value
         self.db.mass = float(self.mass)
+        self.db.hp = 10 #default for objects
 
     def at_before_move(self, getter):
         """
