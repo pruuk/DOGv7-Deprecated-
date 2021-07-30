@@ -148,9 +148,9 @@ _TALENT_DATA = {
                  "the air. In order to enable fly, the character must have a "
                  "number of mutations. There are two paths to flying: winged "
                  "flight and psychokinesis based flight."),
-        'prerequisites': 'mutations.wings.actual': 300,
+        'prerequisites': {'mutations.wings.actual': 300,
                          'mutations.bone_density.actual': '<75',
-                         'mutations.tail.actual': 200,
+                         'mutations.tail.actual': 200},
         'starting_score': 0
     },
     # Strength based talents
@@ -386,8 +386,8 @@ _TALENT_DATA = {
                  "have attacks pass through their body, or travel underground. "
                  "Using this power can be very risky if a check is failed. "
                  "This talent unlocks a number of commands."),
-        'prerequisites': {'mutations.psychoprojection': 700},
-                         {'mutations.psychokinesis': 500},
+        'prerequisites': {'mutations.psychoprojection': 700,
+                          'mutations.psychokinesis': 500},
         'starting_score': 0,
         'range': {'min': 0, 'max': 1000}
     },
@@ -417,8 +417,8 @@ _TALENT_DATA = {
                  "character forever. This talent unlocks a number of commands. "
                  "Maintaining domination over another being drains conviction "
                  "over time."),
-        'prerequisites': {'mutations.psychoprojection': 600},
-                         {'mutations.extrasensory_perception': 700},
+        'prerequisites': {'mutations.psychoprojection': 600,
+                          'mutations.extrasensory_perception': 700},
         'starting_score': 0,
         'range': {'min': 0, 'max': 1000}
     },

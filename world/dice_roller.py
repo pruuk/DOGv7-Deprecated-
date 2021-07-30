@@ -161,5 +161,5 @@ def learned_something(ability_skill_or_power_learn_attribute):
         ability_skill_or_power_learn_attribute += 1
     except Exception:
         logger.log_trace(f"We produced an error trying to increase the learning \
-                          value on {ability_skill_or_power_learn_attribute}")"
+                          value on {ability_skill_or_power_learn_attribute}")
     return

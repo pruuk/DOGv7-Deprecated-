@@ -378,7 +378,7 @@ _MUTATION_DATA = {
                  "in that all three of these mutations are psionic type powers. "
                  "This mutation unlocks a number of talents, but comes at the "
                  "cost of making the character more vulnerable to certain "
-                 "environments and attack types.",
+                 "environments and attack types."),
         'prerequisites': None,
         'starting_score': 0,
         'range': {'min': 0, 'max': 500}
@@ -392,7 +392,7 @@ _MUTATION_DATA = {
                  "At higher levels, they can attack by throwing small objects, "
                  "unlock doors, or even fly (if their mass is low enough). "
                  "This mutation unlocks a number of talents."),
-        'prerequisites': 'mutations.extrasensory_perception': 200,
+        'prerequisites': {'mutations.extrasensory_perception': 200},
         'starting_score': 0,
         'range': {'min': 0, 'max': 1000}
     },
@@ -403,7 +403,7 @@ _MUTATION_DATA = {
                  "the ability to interact with non-physical systems with their "
                  "will. At higher levels, they can unlock a number of talents, "
                  "such as astral projection, atomic phasing, invisibility, etc."),
-        'prerequisites': 'mutations.extrasensory_perception': 200,
+        'prerequisites': {'mutations.extrasensory_perception': 200},
         'starting_score': 0,
         'range': {'min': 0, 'max': 1000}
     },
@@ -425,8 +425,8 @@ ALL_MUTATIONS = ('extreme_flexibility', 'rubber_body', 'improved_balance',
               'bone_density', 'increased_regeneration',
               'regrow_limbs', 'extra_limbs', 'wings', 'tail', 'armored_hide',
               'bladed_body', 'sharp_claws', 'limb_length', 'gut_biome',
-              'poison_bite', 'poison_spit', 'sticky_spit', 'hold_breath',
-              'gills', 'webbed_feet', 'slow_aging', 'sonic_attack',
+              'poison_bite', 'poison_spit', 'sticky_spit',
+              'gills', 'webbed_feet', 'slow_aging',
               'enhanced_reactions', 'visual_sensitivity', 'sonic_sensitivity',
 	          'tactile_sensitivity', 'olefactory_sensitivity',
               'magnetic_sensitivity', 'chromatic_flesh',

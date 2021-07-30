@@ -1,0 +1,108 @@
+{% extends "website/base.html" %}
+
+{% block titleblock %}Home{% endblock %}
+
+{% block header_ext %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-body">
+        <h1 class="card-title">Welcome to Delusions of Grandeur M.U.D.!</h1>
+
+        <hr />
+
+        <p class="lead">
+          Welcome to the home page of Delusions of Grandeur, a Python based Multi-User Dungeon
+          based upon the Evennia codebase. For more info about Evennnia, see: <a href="http://evennia.com">Evennia</a>.
+        </p>
+        <p>
+          You are looking at Delusions of Grandeur's web
+          presence, which can be expanded to a full-fledged site as needed.<br />
+          Through the <a href="{% url 'admin:index' %}">admin interface</a> you can view and edit the
+          database without logging into the game.
+        </p>
+          {% if webclient_enabled %}
+        <p>
+          You can also connect to the game directly from your browser using our
+          <a href="{% url 'webclient:index' %}">online client</a>!<br>
+        </p>
+          {% endif %}
+        <p>
+          For more info, take your time to
+          peruse our extensive online <a href="https://github.com/evennia/evennia/wiki">documentation</a>.
+        </p>
+        <p>
+          Should you have any questions, concerns, bug reports, or
+          if you want to help out Evennia, don't hesitate to join the Evennia community to make your voice heard! Drop a mail to the
+          <a href="https://groups.google.com/forum/#!forum/evennia">mailing list</a> or to come say hi in the <a href="http://webchat.freenode.net/?channels=evennia">developer chatroom</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<div class="row">
+  <div class="col-12 col-md-4 mb-3">
+    <div class="card">
+      <h4 class="card-header text-center">Accounts</h4>
+
+      <div class="card-body">
+        <p>
+          There's currently <strong>{{num_accounts_connected}}</strong> connected out of a total of <strong>{{num_accounts_registered}}</strong> account{{num_accounts_registered|pluralize}} registered.
+        </p>
+        <p>
+          Of these, <strong>{{num_accounts_registered_recent}}</strong> were created this week, and <strong>{{num_accounts_connected_recent}}</strong> have connected within the last seven days.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4 mb-3">
+    <div class="card">
+      <h4 class="card-header text-center">Recently Connected</h4>
+
+      <div class="card-body px-0 py-0">
+        <ul class="list-group">
+          {% for account in accounts_connected_recent %}
+            <li class="list-group-item">{{account.username}}&mdash;<em>{{account.last_login|timesince}} ago</em></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4 mb-3">
+    <div class="card">
+      <h4 class="card-header text-center">Database Stats</h4>
+
+      <div class="card-body py-0 px-0">
+        <ul class="list-group">
+          <li class="list-group-item">{{num_accounts_registered}} account{{num_accounts_registered|pluralize}} (+ {{num_characters}} character{{num_characters|pluralize}})</li>
+          <li class="list-group-item">{{num_rooms}} room{{num_rooms|pluralize}} (+ {{num_exits}} exits)</li>
+          <li class="list-group-item">{{num_others}} other objects</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <h4 class="card-header text-center">Delusions of Grandeur</h4>
+
+      <div class="card-body">
+        <p><a href="http://evennia.com">Delusions of Grandeur</a> is an open-source MUD server built in
+        <a href="http://python.org">Python</a>, on top of the
+        <a href="http://twistedmatrix.com">Twisted</a> and
+        <a href="http://djangoproject.com">Django</a> frameworks using Evennia's code as a base.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

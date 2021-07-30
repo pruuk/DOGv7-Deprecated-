@@ -115,7 +115,7 @@ class Character(DefaultCharacter):
         # TODO: Add in function for character sheet refresh
         # TODO: Add in progression script
 
-        def calculate_encumberance(self):
+    def calculate_encumberance(self):
         """
         This function will determine how encumbered the object is based upon
         carried weight and their strength. Encumberance will affect how much

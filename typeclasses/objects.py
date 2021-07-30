@@ -11,6 +11,8 @@ inheritance.
 
 """
 from evennia import DefaultObject
+from evennia.utils import lazy_property
+from world.traits import TraitHandler
 
 
 class Object(DefaultObject):
@@ -157,6 +159,19 @@ class Object(DefaultObject):
      at_say(speaker, message)  - by default, called if an object inside this
                                  object speaks
 
-     """
+    """
+    @lazy_property
+    def traits(self):
+        return TraitHandler(self)
 
-    pass
+    def get_mass(self):
+        mass = self.attributes.get('mass', 1) # Default objects have 1 unit mass.
+        return mass + sum(obj.get_mass() for obj in self.contents)
+        # TODO: move this over into a trait so it is cleaner and more consistent
+        #       with player objects
+
+    # TODO: Add function for getting monetary value of the object
+
+    def at_object_creation(self):
+        "Run only once, at object creation"
+        pass
