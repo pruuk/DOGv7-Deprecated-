@@ -13,6 +13,7 @@ from world.equip import EquipHandler
 from world.traits import TraitHandler
 from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
+from evennia.utils.logger import log_file
 
 
 class Character(DefaultCharacter):
@@ -106,8 +107,9 @@ class Character(DefaultCharacter):
                           ('arms', ('shoulders', 'arms', 'hands', 'ring')), \
                           ('legs', ('legs', 'feet')), \
                           ('weapon', ('wield1', 'wield2')) )
-        # TODO: Replace the predefined slots below with a function to loop
-        # through limbs and define the slots
+        # define slots that go with the limbs.
+        # TODO: Write a function for changing slots if/when mutations cause
+        # new limbs to be grown or damage causes them to be lost
         self.db.slots = {
             'head': None,
             'face': None,
@@ -158,3 +160,18 @@ class Character(DefaultCharacter):
         # also calulate total mass
         for item in items:
             self.traits.mass.mod = item.db.mass
+
+    def at_attack_tick(self):
+        """
+        This function is called by the ticker created when combat
+        was initiated. It will send the last attack command given
+        to the world rules function for handling combat hit attempts
+        It will default to "hit", the standard attack.
+        """
+        self.execute_cmd("rprom")
+        if self.db.info['In Combat'] == True:
+            log_file(f"{self.name} firing at_attack_tick func. Calling hit_attempt func from world.combat_rules", filename=self.ndb.combatlog_filename)
+            hit_attempt(self, self.db.info['Target'], self.db.info['Default Attack'])
+        else:
+            ticker_id = str("attack_tick_%s" % self.name)
+            tickerhandler.remove(interval=3, callback=self.at_attack_tick, idstring=ticker_id, persistent=False)

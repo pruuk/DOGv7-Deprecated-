@@ -224,3 +224,75 @@ class MuxCommand(default_cmds.MuxCommand):
         # this can be removed in your child class, it's just
         # printing the ingoing variables as a demo.
         super(MuxCommand, self).func()
+
+
+
+## Command to report your health and stamina to
+## the room and its occupants
+class CmdReport(Command):
+    """
+    Report your current Health, Stamina and Conviciton.
+    Can be targeted at another individual
+
+    Usage:
+        report
+
+    Aliases:
+        rep
+    """
+    key = "report"
+    aliases = ["rep"]
+    help_category = "Comms"
+
+    def func(self):
+        "Gets your health/stamina/conviction"
+        caller = self.caller
+        hp = caller.traits.hp.percent_bar()
+        sp = caller.traits.sp.percent_bar()
+        cp = caller.traits.cp.percent_bar()
+        string = "Health:%s Stamina:%s Conviction:%s" % (hp,sp,cp)
+        if None in (hp, sp, cp):
+                # Attributes not defined
+                self.caller.msg("No attributes defined! Update character!")
+                return
+        self.caller.execute_cmd(f"say {string}")
+
+
+class CmdPrompt(Command):
+    """
+    This is similar to CmdReport, but sends the info to
+    the caller's prompt instead of executing the say command.
+
+    Usage:
+        repprompt
+
+    Aliases:
+        rprom
+
+    """
+    key = "repprompt"
+    aliases = ["rprom"]
+    help_category = "Comms"
+
+    def func(self):
+        "Gets your health/stamina/conviction"
+        caller = self.caller
+        hp = caller.traits.hp.percent_bar()
+        sp = caller.traits.sp.percent_bar()
+        cp = caller.traits.cp.percent_bar()
+        position = self.caller.db.info['Position']
+        prompt= "Health:%s Stamina:%s Conviction:%s <%s>" % (hp,sp,cp, position)
+        if None in (hp, sp, cp):
+                # Attributes not defined
+                self.caller.msg("No attributes defined! Update character!")
+                return
+        if self.caller.db.info['In Combat'] == True:
+            if self.caller.db.info['Target'] != None:
+                # caller is in combat and targeting a foe, return status for target
+                tar_name = self.caller.db.info['Target'].name
+                tar_hp = self.caller.db.info['Target'].traits.hp.percent_bar()
+                tar_sp = self.caller.db.info['Target'].traits.sp.percent_bar()
+                tar_position = self.caller.db.info['Target'].db.info['Position']
+                prompt = "Health:%s Stamina:%s Conviction:%s <%s>    |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,tar_name,tar_hp,tar_sp, tar_position)
+        self.caller.db.promptchoice = 'standard'
+        self.caller.msg(prompt=prompt)

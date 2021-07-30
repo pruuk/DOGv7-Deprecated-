@@ -72,7 +72,7 @@ def return_a_roll_sans_crits(number, dist_shape='normal'):
                           make sure the correct vars are passed in.")
 
 
-def roll(number, dist_shape='normal', *ability_skill_or_powers):
+def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
     """
     Returns a semi-random number from a distribution with a mean of the number
     passed in.
