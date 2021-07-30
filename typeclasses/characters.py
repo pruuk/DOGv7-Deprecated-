@@ -8,6 +8,11 @@ creation commands.
 
 """
 from evennia import DefaultCharacter
+from evennia.utils import lazy_property
+from world.equip import EquipHandler
+from world.traits import TraitHandler
+from world.dice_roller import return_a_roll_sans_crits as rarsc
+from world import talents, mutations
 
 
 class Character(DefaultCharacter):
@@ -30,5 +35,105 @@ class Character(DefaultCharacter):
     at_post_puppet - Echoes "AccountName has entered the game" to the room.
 
     """
+    # pull in handlers for traits, equipment, mutations, talents
+    @lazy_property
+    def traits(self):
+        """TraitHandler that manages character traits."""
+        return TraitHandler(self)
 
-    pass
+    @lazy_property
+    def ability_scores(self):
+        """TraitHandler that manages character ability scores."""
+        return TraitHandler(self, db_attribute='ability_scores')
+
+    @lazy_property
+    def talents(self):
+        """TraitHandler that manages character talents."""
+        return TraitHandler(self, db_attribute='talents')
+
+    @lazy_property
+    def mutations(self):
+        """TraitHandler that manages character mutations."""
+        return TraitHandler(self, db_attribute='mutations')
+
+    @lazy_property
+    def equip(self):
+        """Handler for equipped items."""
+        return EquipHandler(self)
+
+    def at_object_creation(self):
+        "Called only at object creation and with update command."
+        # clear traits, ability_scores, talents, and mutations
+        self.ability_scores.clear()
+        self.traits.clear()
+        self.talents.clear()
+        self.mutations.clear()
+        # add in the ability scores
+        self.ability_scores.add(key='Dex', name='Dexterity', type='static', \
+                        base=rarsc(100))
+        self.ability_scores.add(key='Str', name='Strength', type='static', \
+                        base=rarsc(100))
+        self.ability_scores.add(key='Vit', name='Vitality', type='static', \
+                        base=rarsc(100))
+        self.ability_scores.add(key='Per', name='Perception', type='static', \
+                        base=rarsc(100))
+        self.ability_scores.add(key='Cha', name='Charisma', type='static', \
+                        base=rarsc(100))
+        # add in traits for health, stamina, conviction, mass, encumberance
+        self.traits.add(key="hp", name="Health Points", type="gauge", \
+                        base=((self.ability_scores.Vit.current * 5) + \
+                        (self.ability_scores.Cha.current * 2)))
+        self.traits.add(key="sp", name="Stamina Points", type="gauge", \
+                        base=((self.ability_scores.Vit.current * 3) + \
+                        (self.ability_scores.Str.current * 2)+ \
+                        (self.ability_scores.Dex.current)))
+        self.traits.add(key="cp", name="Conviction Points", type="gauge", \
+                        base=((self.ability_scores.Cha.current * 5) + \
+                        (self.ability_scores.Vit.current)))
+        self.traits.add(key="mass", name="Mass", type='static', \
+                        base=rarsc(160, dist_shape='very flat'))
+        self.traits.add(key="enc", name="Encumberance", type='static', \
+                        base=0, max=(self.ability_scores.Str.current * .5))
+        # apply the initial mutations and talents. Most mutations will be set
+        # to zero, as will many talents
+        talents.apply_talents(self)
+        mutations.initialize_mutations(self)
+        # set up intial equipment slots for the character. Since the character
+        # is new and has no mutations, there won't be slots like tail or extra
+        # arms
+        self.db.limbs = ( ('head', ('head', 'face', 'ears', 'neck')), \
+                          ('torso', ('chest', 'back', 'waist', 'quiver')), \
+                          ('arms', ('shoulders', 'arms', 'hands', 'ring')), \
+                          ('legs', ('legs', 'feet')), \
+                          ('weapon', ('main hand', 'off hand', 'two hand', \
+                                      'shield', 'improvised')) )
+        # Add in info db to store other useful tidbits we'll need
+        self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strikes', \
+                        'In Combat': False, 'Position': 'standing', \
+                        'Wimpy': 100, 'Title': None}
+        # TODO: Add in character sheet
+        # TODO: Add in function for character sheet refresh
+        # TODO: Add in progression script
+
+        def calculate_encumberance(self):
+        """
+        This function will determine how encumbered the object is based upon
+        carried weight and their strength. Encumberance will affect how much
+        stamina it costs to move, fight, etc...
+
+        Equipped items will not count against encumberance as much as 'loose'
+        items in inventory. Certain containers and bags will also reduce
+        encmberance.
+        """
+        items = self.contents
+        self.traits.enc.current = 0
+        self.traits.enc.max = self.ability_scores.Str.current * .5
+        for item in items:
+            if item.db.used_by == self:
+                self.traits.enc.current += item.db.mass * .5
+            else:
+                self.traits.enc.current += item.db.mass
+        self.ndb.enc_multiplier = (self.traits.enc.current / self.traits.enc.max) ** .3
+        # also calulate total mass
+        for item in items:
+            self.traits.mass.mod = item.db.mass
