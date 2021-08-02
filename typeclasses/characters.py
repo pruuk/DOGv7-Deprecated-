@@ -13,6 +13,7 @@ from world.equip import EquipHandler
 from world.traits import TraitHandler
 from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
+from world.combat_rules import resolve_combat_actions
 from evennia.utils.logger import log_file
 
 
@@ -71,15 +72,15 @@ class Character(DefaultCharacter):
         self.mutations.clear()
         # add in the ability scores
         self.ability_scores.add(key='Dex', name='Dexterity', type='static', \
-                        base=rarsc(100))
+                        base=rarsc(100), learn=0)
         self.ability_scores.add(key='Str', name='Strength', type='static', \
-                        base=rarsc(100))
+                        base=rarsc(100), learn=0)
         self.ability_scores.add(key='Vit', name='Vitality', type='static', \
-                        base=rarsc(100))
+                        base=rarsc(100), learn=0)
         self.ability_scores.add(key='Per', name='Perception', type='static', \
-                        base=rarsc(100))
+                        base=rarsc(100), learn=0)
         self.ability_scores.add(key='Cha', name='Charisma', type='static', \
-                        base=rarsc(100))
+                        base=rarsc(100), learn=0)
         # add in traits for health, stamina, conviction, mass, encumberance
         self.traits.add(key="hp", name="Health Points", type="gauge", \
                         base=((self.ability_scores.Vit.current * 5) + \
@@ -92,7 +93,7 @@ class Character(DefaultCharacter):
                         base=((self.ability_scores.Cha.current * 5) + \
                         (self.ability_scores.Vit.current)))
         self.traits.add(key="mass", name="Mass", type='static', \
-                        base=rarsc(160, dist_shape='very flat'))
+                        base=rarsc(180, dist_shape='very flat'))
         self.traits.add(key="enc", name="Encumberance", type='static', \
                         base=0, max=(self.ability_scores.Str.current * .5))
         # apply the initial mutations and talents. Most mutations will be set
@@ -131,7 +132,7 @@ class Character(DefaultCharacter):
         # Add in info db to store other useful tidbits we'll need
         self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strikes', \
                         'In Combat': False, 'Position': 'standing', \
-                        'Wimpy': 100, 'Title': None}
+                        'Wimpy': 100, 'Yield': 200, 'Title': None}
         # money
         self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}
         # TODO: Add in character sheet
@@ -149,17 +150,134 @@ class Character(DefaultCharacter):
         encmberance.
         """
         items = self.contents
-        self.traits.enc.current = 0
-        self.traits.enc.max = self.ability_scores.Str.current * .5
         for item in items:
             if item.db.used_by == self:
                 self.traits.enc.current += item.db.mass * .5
             else:
                 self.traits.enc.current += item.db.mass
-        self.ndb.enc_multiplier = (self.traits.enc.current / self.traits.enc.max) ** .3
+        if self.traits.enc.current == 0:
+            self.ndb.enc_mod = 1
+        else:
+            self.ndb.enc_mod = ((self.traits.enc.current / self.traits.enc.max) ** .15)
         # also calulate total mass
         for item in items:
             self.traits.mass.mod = item.db.mass
+
+
+    def calc_combat_modifiers(self):
+        """
+        Rerun all the calculations for combat modifiers and store them as temp
+        variables on the character.
+        """
+        self.calculate_encumberance()
+        # modifiers for health/stamina/conviction
+        self.ndb.hp_mod = ((self.traits.hp.current / self.traits.hp.max) ** .15)
+        self.ndb.sp_mod = ((self.traits.sp.current / self.traits.sp.max) ** .15)
+        self.ndb.cp_mod = ((self.traits.cp.current / self.traits.cp.max) ** .15)
+
+
+    def calc_position_modifier(self):
+        """
+        Recalculate current modifier for position for combat actions.
+        """
+        position = self.db.info['Position']
+        # ground positions listed from best to worst
+        if position == 'tbmount': # mounted opponent and taken their back
+            self.ndb.position_mod = 1.5
+        elif position == "mount": # mounted opponent, facing them
+            self.ndb.position_mod = 1.4
+        elif position == "side control": # on top, have side control
+            self.ndb.position_mod = 1.2
+        elif position == "top": # on top, in their guard
+            self.ndb.position_mod = 1.05
+        elif position == "in guard": # on bottom, in your guard
+            self.ndb.position_mod = .95
+        elif position == "side controlled": # on bottom, being side controlled
+            self.ndb.position_mod = .85
+        elif position == "mounted": # on bottom, mounted
+            self.ndb.position_mod = .75
+        elif position == "prmounted": # on bottom, face down, back taken
+            self.ndb.position_mod = .5
+        # standing grappling positions from best to worst
+        elif position == "tbstanding": # riding opponent from behind, they're standing
+            self.ndb.position_mod = 1.25
+        elif position == "clinching": # both standing, you have them in a clinch
+            self.ndb.position_mod = 1.05
+        elif position == "clinched": # both standing, they have you in a clinch
+            self.ndb.position_mod = .95
+        elif position == "standingbt": # opponent has taken your back, you're standing
+            self.ndb.position_mod = .85
+        # non grappling positions, normal
+        elif position == "standing":
+            self.ndb.position_mod = 1
+        elif position == "sitting":
+            self.ndb.position_mod = .9
+        elif position == "supine":
+            self.ndb.position_mod = .85
+        elif position == "prone":
+            self.ndb.position_mod = .8
+        elif position == "sleeping":
+            self.ndb.position_mod = .5
+        # other environmentally dependant positions
+        elif position == "floating": # floating in air or water, limited control
+            self.ndb.position_mod = 1
+        elif position == "flying": # flying through air under your own power
+            self.ndb.position_mod = 1.25
+        # all other cases, log an error
+        else:
+            self.ndb.position_mod = 1
+            logger.log_trace("Unknown character position. Check the code for \
+                              typeclasses.characters.Character.calc_position_modifier()")
+
+
+    def check_wimpyield(self):
+        """
+        Check if character has fallen below their wimpy or yield thresholds. If
+        they have, change next combat action to the appropriate action.
+        """
+        # TODO: Remove these emotes once we've moved the flee/yield to
+        # commands
+        if self.traits.hp.current <= self.db.info['Wimpy']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'flee')
+            else:
+                self.ndb.next_combat_action = ['flee']
+            self.execute_cmd("emote is severely wounded and tries to flee.")
+        elif self.traits.hp.current <= self.db.info['Yield']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'yield')
+            else:
+                self.ndb.next_combat_action = ['yield']
+            # self.execute_cmd("emote is heavily wounded and tries to yield.")
+        elif self.traits.sp.current <= self.db.info['Wimpy']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'flee')
+            else:
+                self.ndb.next_combat_action = ['flee']
+            self.execute_cmd("emote is severely exhausted and tries to flee.")
+        elif self.traits.sp.current <= self.db.info['Yield']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'yield')
+            else:
+                self.ndb.next_combat_action = ['yield']
+            # self.execute_cmd("emote is exhausted and tries to yield.")
+        elif self.traits.hp.current <= self.db.info['Wimpy']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'flee')
+            else:
+                self.ndb.next_combat_action = ['flee']
+            self.execute_cmd("emote has zero will to fight and tries to flee.")
+        elif self.traits.hp.current <= self.db.info['Yield']:
+            if len(self.ndb.next_combat_action) > 0:
+                self.ndb.next_combat_action.insert(0, 'yield')
+            else:
+                self.ndb.next_combat_action = ['yield']
+            # self.execute_cmd("emote has no will to fight and tries to yield.")
+        else:
+            # adding a debugging line to see if we're getting to here.
+            # self.execute_cmd("emote is still in fighting shape and spirit.")
+            pass
+
 
     def at_attack_tick(self):
         """
@@ -169,9 +287,14 @@ class Character(DefaultCharacter):
         It will default to "hit", the standard attack.
         """
         self.execute_cmd("rprom")
-        if self.db.info['In Combat'] == True:
+        if self.db.info['In Combat'] == True and self.db.info['Target'] is not None:
             log_file(f"{self.name} firing at_attack_tick func. Calling hit_attempt func from world.combat_rules", filename=self.ndb.combatlog_filename)
-            hit_attempt(self, self.db.info['Target'], self.db.info['Default Attack'])
+            # self.execute_cmd(f"emote is attacking {self.db.info['Target'].name}")
+            if len(self.ndb.next_combat_action) > 0:
+                resolve_combat_actions(self, self.db.info['Target'])
+            else:
+                resolve_combat_actions(self, self.db.info['Target'])
         else:
             ticker_id = str("attack_tick_%s" % self.name)
-            tickerhandler.remove(interval=3, callback=self.at_attack_tick, idstring=ticker_id, persistent=False)
+            tickerhandler.remove(interval=4, callback=self.at_attack_tick, idstring=ticker_id, persistent=False)
+            self.db.ndb.next_combat_action = []

@@ -16,7 +16,7 @@ own cmdsets by inheriting from them or directly from `evennia.CmdSet`.
 
 from evennia import default_cmds
 from commands import equip_commands
-from commands import command, combat_commands, equip_commands
+from commands import command, combat_commands, equip_commands, builder_commands
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -40,6 +40,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(command.CmdReport())
         self.add(command.CmdPrompt())
         self.add(combat_commands.CmdAttack())
+        self.add(builder_commands.CmdHeal())
+
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

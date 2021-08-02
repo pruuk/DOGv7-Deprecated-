@@ -83,14 +83,39 @@ class CmdAttack(Command):
         defender.ndb.combatlog_filename = logfile_name_string
         log_file(f"{attacker.name} attacked {defender.name}", filename=logfile_name_string)
         attacker.cmdset.add("commands.combat_commands.CombatCmdSet")
+        attacker.ndb.next_combat_action = []
+        attacker.ndb.defending_bonus_mod = 1
+        # set initial combat range in a temp variable
+        if attacker.db.info['Default Attack'] == 'grapple':
+            attacker.ndb.range = 'grapple'
+        elif attacker.db.info['Default Attack'] in ['unarmed_strikes', \
+            'melee_weapon_strike', 'bash', 'defend']:
+            attacker.ndb.range = 'melee'
+        elif attacker.db.info['Default Attack'] in ['ranged_weapon_strike', \
+            'mental_attack', 'taunt']:
+            attacker.ndb.range = 'ranged'
+        else:
+            attacker.ndb.range = 'out_of_range'
         ## Build defender ticker if they're not in combat already
-        if defender.db.info['In Combat'] == False:
+        if defender.db.info['In Combat'] == False or defender.db.info['Target'] == attacker:
             defender.db.info['Target'] = attacker
             defender.db.info['In Combat'] = True
+            defender.ndb.range = attacker.ndb.range
             ticker_id = str("attack_tick_%s" % defender.name)
             tickerhandler.add(interval=4, callback=defender.at_attack_tick, idstring=ticker_id, persistent=False)
             # defender.execute_cmd("emote is defending themselves!")
+            defender.ndb.next_combat_action = []
+            defender.ndb.defending_bonus_mod = 1
             defender.cmdset.add("commands.combat_commands.CombatCmdSet")
+        else:
+            if defender.ndb.range is not None:
+                defender.ndb.range = attacker.ndb.range
+            if defender.ndb.next_combat_action is not None:
+                defender.ndb.next_combat_action = []
+            if defender.defending_bonus_mod is not None:
+                defender.ndb.defending_bonus_mod = 1
+            if defender.db.info['Target'] is not None:
+                defender.db.info['Target'] = attacker
         return
 
 
@@ -111,6 +136,7 @@ class CmdDisengage(Command):
         caller = self.caller
         # self.caller.db.toggles['In Combat'] = False
         self.caller.msg("You try to disengage from combat.")
+        self.caller.ndb.next_combat_action.insert(0, "disengage")
         self.caller.db.info['In Combat'] = False
 
 
@@ -133,6 +159,7 @@ class CmdFlee(Command):
         "Implements the command"
         caller = self.caller
         self.caller.db.info['In Combat'] = False
+        self.caller.ndb.next_combat_action.insert(0, "flee")
         exits = []
         for exit in self.caller.location.exits:
             exits.append(exit)

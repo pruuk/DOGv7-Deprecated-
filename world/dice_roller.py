@@ -92,7 +92,7 @@ def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
     considered to be critical successes(above) or critical failures (below).
     With the idea that we learn best from our failures and triumphs, these will
     increase the learn properties of any skills, powers, or ability scores
-    passed in (as **kwargs) for each critical success or failure. Critical
+    passed in (as *args) for each critical success or failure. Critical
     sucesses will also trigger an additional roll, but each subsequent critical
     suceess will add less and less to the total output "roll".
 

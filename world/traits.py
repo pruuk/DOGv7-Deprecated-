@@ -81,6 +81,7 @@ Example:
             type (str): 'static' for static traits
             base (int, float): base value of the trait
             mod Optional(int): modifier value
+            learn Optional(int): counter for attribute progression
             extra Optional(dict): keys of this dict are accessible on the
                 `Trait` object as attributes or dict keys
         Properties:
@@ -351,7 +352,7 @@ class Trait(object):
 
         self._data = data
         self._keys = ('name', 'type', 'base', 'mod',
-                      'current', 'min', 'max', 'extra')
+                      'current', 'min', 'max', 'learn', 'extra')
         self._locked = True
 
         if not isinstance(data, _SaverDict):
@@ -637,6 +638,11 @@ class Trait(object):
         else:
             raise AttributeError(
                 "'current' property is read-only on static 'Trait'.")
+
+    @property
+    def learn(self):
+        "Returns an integer value that is a counter for learning this trait"
+        return int(self._data['learn'])
 
     @property
     def extra(self):
