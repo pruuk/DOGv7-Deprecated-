@@ -36,7 +36,7 @@ GRAPPLING_POSITIONS_POSITIONS = ('tbmount', 'mount', 'side control', 'top', 'in 
                     'clinching', 'clinched', 'standingbt')
 NON_GRAPPLING_POSITIONS = ('standing', 'sitting', 'supine', 'prone', 'sleeping', \
                            'floating', 'flying')
-COMBAT_RANGES = ('out_of_range', 'ranged', 'melee', 'grappling')
+COMBAT_RANGES = ('out_of_range', 'ranged', 'melee', 'grapple')
 
 def resolve_combat_actions(attacker, defender):
     """
@@ -68,10 +68,10 @@ def resolve_combat_actions(attacker, defender):
     9. Roll for damage - send combat msgs out and apply damage. If we have
        actions left, return to step #2.
     """
-    # attacker.execute_cmd("emote is attacking.")
-    # defender.execute_cmd("emote is attacking.")
     attacker.location.msg_contents("\n")
     log_file("start of resolve combat function.", filename=attacker.ndb.combatlog_filename)
+    # define next action using default attack if no next action present
+    set_next_combat_action(attacker, defender)
     # determine num of actions for the attacker and log it
     return_num_combat_actions(attacker)
     log_file(f"{attacker.name} gets {attacker.ndb.num_of_actions} actions this round.", \
@@ -89,6 +89,7 @@ def resolve_combat_actions(attacker, defender):
     # ends
     while attacker.ndb.num_of_actions > 0:
         log_file("start of combat action loop.", filename=attacker.ndb.combatlog_filename)
+        set_next_combat_action(attacker, defender)
         log_file(f"{attacker.name} has {attacker.ndb.num_of_actions} actions \
                  remaining this round.", filename=attacker.ndb.combatlog_filename)
         # Run combat validity checks. log in that function
@@ -115,12 +116,25 @@ def resolve_combat_actions(attacker, defender):
     return
 
 
+def set_next_combat_action(attacker, defender):
+    """
+    define next action using default attack if no next action present.
+    """
+    # log_file("start of set_next_combat_action function.", filename=attacker.ndb.combatlog_filename)
+    if len(attacker.ndb.next_combat_action) == 0:
+        attacker.ndb.next_combat_action.insert(0, attacker.db.info['Default Attack'])
+    if len(defender.ndb.next_combat_action) == 0:
+        defender.ndb.next_combat_action.insert(0, defender.db.info['Default Attack'])
+    return
+
+
+
 def return_num_combat_actions(attacker):
     """
     Rolls to determine the number of actions the attacker can perform during
     this round of combat.
     """
-    log_file("start of num of combat actions function.", filename=attacker.ndb.combatlog_filename)
+    # log_file("start of num of combat actions function.", filename=attacker.ndb.combatlog_filename)
     # listing out modifiers for readbility
     attacker.calculate_encumberance() # updates a temp variable named enc_mod
     stamina_modifier = 1 - ((attacker.traits.sp.current / attacker.traits.sp.max) ** .3)
@@ -137,8 +151,46 @@ def run_combat_validty_checks(attacker, defender):
     to be in combat. If not, log the results of why combat ended and run cleanup
     functions to remove tickers and temp attributes.
     """
-    log_file("start of combat validity checks.", filename=attacker.ndb.combatlog_filename)
+    # log_file("start of combat validity checks.", filename=attacker.ndb.combatlog_filename)
     # check for death/exhaustion/loss of will
+    check_for_death_exhaustion_ennunu(attacker, defender)
+    # have the attacker and defender run funcs to check if they want to
+    # flee/yield
+    attacker.check_wimpyield()
+    defender.check_wimpyield()
+    # check if the attacker wants to flee/disengage/yield/mercy
+    if attacker.ndb.next_combat_action[0] in FLEE_ACTIONS:
+        log_file(f"{attacker.name} is choosing to {attacker.ndb.next_combat_action[0]}.")
+        if action == 'yield' and defender.db.info['Mercy']:
+            attacker.ndb.next_combat_action.pop(0)
+            log_file(f"{attacker.name} yields and {defender.name} grants mercy.", filename=attacker.ndb.combatlog_filename)
+            attacker.execute_cmd(f"emote yields and {defender.name} grants mercy.")
+            end_combat(attacker, defender)
+        else:
+            attacker.execute_cmd(attacker.ndb.next_combat_action.pop(0))
+    if 'yield' in defender.ndb.next_combat_action and attacker.db.info['Mercy']:
+        attacker.execute_cmd(f"emote is merciful towards {defender.name} and allows them to yield.")
+        log_file(f"{attacker.name} is merciful towards {defender.name}.", filename=attacker.ndb.combatlog_filename)
+        end_combat(attacker, defender)
+    # check if both combatants are in the room
+    if attacker.location != defender.location:
+        log_file(f"{attacker.name} and {defender.name} not located in same room. Ending combat.", filename=attacker.ndb.combatlog_filename)
+        end_combat(attacker, defender)
+    # check if everyone is marked as in combat
+    if not attacker.db.info["In Combat"]:
+        log_file(f"{attacker.name} is marked as not in combat.", filename=attacker.ndb.combatlog_filename)
+        end_combat(attacker, defender)
+    if not defender.db.info["In Combat"]:
+        log_file(f"{defender.name} is marked as not in combat.", filename=attacker.ndb.combatlog_filename)
+        end_combat(attacker, defender)
+    return
+
+
+def check_for_death_exhaustion_ennunu(attacker, defender):
+    """
+    Check if attacker or defender is out of health, stamina, or conviction.
+    End combat now if they are.
+    """
     if attacker.traits.hp.current < 1:
         log_file(f"{attacker.name} has no health left.", filename=attacker.ndb.combatlog_filename)
         end_combat(attacker, defender)
@@ -157,37 +209,6 @@ def run_combat_validty_checks(attacker, defender):
     elif defender.traits.cp.current < 1:
         log_file(f"{defender.name} has no conviction left.", filename=attacker.ndb.combatlog_filename)
         end_combat(attacker, defender)
-    # have the attacker and defender run funcs to check if they want to
-    # flee/yield
-    attacker.check_wimpyield()
-    defender.check_wimpyield()
-    # check if the attacker wants to flee/disengage/yield/mercy
-    if len(attacker.ndb.next_combat_action) > 0:
-        if attacker.ndb.next_combat_action[0] in FLEE_ACTIONS:
-            action = attacker.ndb.next_combat_action.pop(0)
-            log_file(f"{attacker.name} is choosing to {action}.")
-            if action == 'yield' and defender.db.info['Mercy']:
-                log_file(f"{attacker.name} yields and {defender.name} grants mercy.", filename=attacker.ndb.combatlog_filename)
-                attacker.execute_cmd(f"emote yields and {defender.name} grants mercy.")
-                end_combat(attacker, defender)
-            else:
-                attacker.execute_cmd(action)
-    if len(defender.ndb.next_combat_action) > 0:
-        if 'yield' in defender.ndb.next_combat_action and attacker.db.info['Mercy']:
-            attacker.execute_cmd(f"emote is merciful towards {defender.name} and allows them to yield.")
-            log_file(f"{attacker.name} is merciful towards {defender.name}.", filename=attacker.ndb.combatlog_filename)
-            end_combat(attacker, defender)
-    # check if both combatants are in the room
-    if attacker.location != defender.location:
-        log_file(f"{attacker.name} and {defender.name} not located in same room. Ending combat.", filename=attacker.ndb.combatlog_filename)
-        end_combat(attacker, defender)
-    # check if everyone is marked as in combat
-    if not attacker.db.info["In Combat"]:
-        log_file(f"{attacker.name} is marked as not in combat.", filename=attacker.ndb.combatlog_filename)
-        end_combat(attacker, defender)
-    if not defender.db.info["In Combat"]:
-        log_file(f"{defender.name} is marked as not in combat.", filename=attacker.ndb.combatlog_filename)
-        end_combat(attacker, defender)
     return
 
 
@@ -197,7 +218,7 @@ def get_footwork_and_groundwork_modifiers(attacker, defender):
     attacker and defender. These are stored as temp variables on the attacker
     and defender objects to be used later for almost all combat actions.
     """
-    log_file("start of footwork/groundwork mods func.", filename=attacker.ndb.combatlog_filename)
+    # log_file("start of footwork/groundwork mods func.", filename=attacker.ndb.combatlog_filename)
     # calc groundwork ratio
     att_groundwork_dice = attacker.talents.grappling.actual * \
                           attacker.ndb.position_mod * \
@@ -212,11 +233,11 @@ def get_footwork_and_groundwork_modifiers(attacker, defender):
                           defender.ndb.sp_mod * defender.ndb.cp_mod * \
                           defender.ndb.enc_mod
     attacker.ndb.groundwork = roll(att_groundwork_dice, 'flat', \
-                              attacker.ability_scores.Dex.learn, \
-                              attacker.talents.grappling.learn)
+                              attacker.ability_scores.Dex, \
+                              attacker.talents.grappling)
     defender.ndb.groundwork = roll(def_groundwork_dice, 'flat', \
-                              defender.ability_scores.Dex.learn, \
-                              defender.talents.grappling.learn)
+                              defender.ability_scores.Dex, \
+                              defender.talents.grappling)
     # calc footwork ratio
     att_footwork_dice = attacker.talents.footwork.actual * \
                         attacker.ndb.position_mod * attacker.ndb.hp_mod * \
@@ -228,11 +249,11 @@ def get_footwork_and_groundwork_modifiers(attacker, defender):
                         defender.ndb.sp_mod * defender.ndb.cp_mod * \
                         defender.ndb.enc_mod
     attacker.ndb.footwork = roll(att_footwork_dice, 'flat', \
-                            attacker.ability_scores.Dex.learn, \
-                            attacker.talents.footwork.learn)
+                            attacker.ability_scores.Dex, \
+                            attacker.talents.footwork)
     defender.ndb.footwork = roll(def_footwork_dice, 'flat', \
-                            defender.ability_scores.Dex.learn, \
-                            defender.talents.footwork.learn)
+                            defender.ability_scores.Dex, \
+                            defender.talents.footwork)
     return
 
 
@@ -242,17 +263,13 @@ def run_combat_position_checks(attacker, defender):
     their preferred attack. If they are not, use an action to try to get into
     position until attacker is in position or is out of actions for the round.
     """
-    log_file("start of position checks.", filename=attacker.ndb.combatlog_filename)
-    if len(attacker.ndb.next_combat_action) > 0:
-        preferred_action = attacker.ndb.next_combat_action[0]
-    else:
-        preferred_action = attacker.db.info['Default Attack']
+    # log_file("start of position checks.", filename=attacker.ndb.combatlog_filename)
     # elimiate the easiest case, attacker is standing
     if attacker.db.info['Position'] == 'standing':
         log_file(f"Position check complete for {attacker.name}. On to range check.", filename=attacker.ndb.combatlog_filename)
         return
     # attacker wants to grapple
-    if preferred_action == 'grapple':
+    if attacker.ndb.next_combat_action[0] == 'grapple':
         log_file(f"Position check complete for {attacker.name}. On to range check.", filename=attacker.ndb.combatlog_filename)
         return
     # attacker in a grappling position on ground
@@ -276,16 +293,8 @@ def grapple_improve_position(attacker, defender):
     """
     Attempt to improve position while grappling on ground.
     """
-    log_file("start of improve grapple position func.", filename=attacker.ndb.combatlog_filename)
-    if len(attacker.ndb.next_combat_action) > 0:
-        a_preferred_action = attacker.ndb.next_combat_action[0]
-    else:
-        a_preferred_action = attacker.db.info['Default Attack']
-    if len(defender.ndb.next_combat_action) > 0:
-        d_preferred_action = defender.ndb.next_combat_action[0]
-    else:
-        d_preferred_action = defender.db.info['Default Attack']
-    attacker.ndb.num_of_actions -= 1
+    # log_file("start of improve grapple position func.", filename=attacker.ndb.combatlog_filename)
+    use_combat_action(attacker)
     log_file(f"{attacker.name} attempting to improve their grappling position.", filename=attacker.ndb.combatlog_filename)
     # index the ground position
     position_index = {6 : 'tbmount', 5 : 'mount', 4 : 'tbstanding', \
@@ -301,30 +310,25 @@ def grapple_improve_position(attacker, defender):
 
     if attacker.ndb.groundwork >= defender.ndb.groundwork * 1.5:
         # massive grappling success
-        success = True
         pos_change = 3
     elif attacker.ndb.groundwork >= defender.ndb.groundwork * 1.25:
         # excellent grappling success
-        success = True
         pos_change = 2
     elif attacker.ndb.groundwork >= defender.ndb.groundwork:
         # grappling success
-        success = True
         pos_change = 1
     elif attacker.ndb.groundwork * 1.5 < defender.ndb.groundwork :
         # massive grappling failure
-        success = false
         pos_change = -1
     else:
         # grappling failure
-        success = false
         pos_change = 0
 
     # attacker doesn't want to grapple, trying to escape from bad position
-    if a_preferred_action != 'grapple' and attacker.db.info['Position'] in \
-                             ['side controlled', 'mounted', 'prmounted', \
-                             'clinched', 'standingbt']:
-        if success:
+    if attacker.ndb.next_combat_action[0] != 'grapple' and attacker.db.info['Position'] in \
+                                             ['side controlled', 'mounted', 'prmounted', \
+                                             'clinched', 'standingbt']:
+        if pos_change > 0:
             log_file(f"{attacker.name} was able to escape.", filename=attacker.ndb.combatlog_filename)
             attacker.db.info['Position'] = 'standing'
             defender.db.info['Position'] = 'standing'
@@ -356,7 +360,7 @@ def grapple_improve_position(attacker, defender):
                             defender.db.info['Position'] = value
                 return
     # defender doesn't want to grapple, critical failure
-    if d_preferred_action != 'grapple' and pos_change == -1:
+    if defender.ndb.next_combat_action[0] != 'grapple' and pos_change == -1:
         log_file(f"{defender.name} was able to escape.", filename=attacker.ndb.combatlog_filename)
         attacker.db.info['Position'] = 'standing'
         defender.db.info['Position'] = 'standing'
@@ -455,16 +459,7 @@ def run_combat_range_checks(attacker, defender):
     defender relative to each other. Uses an attacker action to move into to
     preferred range if it makes sense.
     """
-    log_file("start of range checks.", filename=attacker.ndb.combatlog_filename)
-    # set preferred attacks
-    if len(attacker.ndb.next_combat_action) > 0:
-        a_preferred_action = attacker.ndb.next_combat_action[0]
-    else:
-        a_preferred_action = attacker.db.info['Default Attack']
-    if len(defender.ndb.next_combat_action) > 0:
-        d_preferred_action = defender.ndb.next_combat_action[0]
-    else:
-        d_preferred_action = defender.db.info['Default Attack']
+    # log_file("start of range checks.", filename=attacker.ndb.combatlog_filename)
     # check for cases where defender is actually trying to fight someone else
     if defender.db.info['Target'] == None:
         defender.db.info['Target'] = attacker
@@ -472,16 +467,16 @@ def run_combat_range_checks(attacker, defender):
     if defender.db.info['Target'] != attacker:
         # defender is distracted, move attacker into the range they want w/o
         # a check and w/o spending an action
-        if a_preferred_action == 'grapple':
-            attacker.ndb.range = 'grappling'
+        if attacker.ndb.next_combat_action[0] == 'grapple':
+            attacker.ndb.range = 'grapple'
             # TODO: find a clean way later to express a penalty for someone
             # being overwhelmed by more than one opponent and/or being grappled
-        elif a_preferred_action in ['unarmed_strikes', 'melee_weapon_strike', \
+        elif attacker.ndb.next_combat_action[0] in ['unarmed_strikes', 'melee_weapon_strike', \
                                     'bash', 'defend']:
             attacker.ndb.range = 'melee'
-        elif a_preferred_action in ['ranged_weapon_strike', 'mental_attack']:
+        elif attacker.ndb.next_combat_action[0] in ['ranged_weapon_strike', 'mental_attack']:
             attacker.ndb.range = 'ranged'
-        elif a_preferred_action in ['disengage', 'flee']:
+        elif attacker.ndb.next_combat_action[0] in ['disengage', 'flee']:
             attacker.ndb.range = 'out_of_range'
         return
     else:
@@ -495,12 +490,12 @@ def run_combat_range_checks(attacker, defender):
             log_file(f"{defender.name}: {defender.ndb.range}", filename=attacker.ndb.combatlog_filename)
             defender.ndb.range = attacker.ndb.range
         # ranges match, go through preferred actions and change range as needed
-        if a_preferred_action == 'grappling':
-            if attacker.ndb.range == 'grappling':
+        if attacker.ndb.next_combat_action[0] == 'grapple':
+            if attacker.ndb.range == 'grapple':
                 return # already in preferred range, move on to next step
             if attacker.ndb.footwork < defender.ndb.footwork:
                 # attacker lost footwork battle. use and action and return
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 log_file(f"{attacker.name} tries to close the range with \
                          {defender.name}, but fails.", \
                          filename=attacker.ndb.combatlog_filename)
@@ -510,11 +505,11 @@ def run_combat_range_checks(attacker, defender):
             if attacker.ndb.range == 'melee':
                 # attacker wants to grapple and won footwork battle, move
                 # both to clinch from melee range
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.db.info['Position'] = 'clinching'
-                attacker.ndb.range = 'grappling'
+                attacker.ndb.range = 'grapple'
                 defender.db.info['Position'] = 'clinched'
-                defender.ndb.range = 'grappling'
+                defender.ndb.range = 'grapple'
                 log_file(f"{attacker.name} moves from melee range into \
                          grappling range with {defender.name} and clinches \
                 them.", filename=attacker.ndb.combatlog_filename)
@@ -525,7 +520,7 @@ def run_combat_range_checks(attacker, defender):
             elif attacker.ndb.range == 'ranged':
                 # attacker wants to grapple and won footwork battle, move
                 # both to melee range, use an action
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'melee'
                 defender.ndb.range = 'melee'
                 log_file(f"{attacker.name} closes range to {attacker.ndb.range}.")
@@ -533,28 +528,28 @@ def run_combat_range_checks(attacker, defender):
                 return
             else:
                 # combatants were out of range. Move to ranged
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'ranged'
                 defender.ndb.range = 'ranged'
                 log_file(f"{attacker.name} closes range to {attacker.ndb.range}.")
                 attacker.execute_cmd(f"emote closes range to {attacker.ndb.range}.")
                 return
-        elif a_preferred_action in ['unarmed_strikes', 'melee_weapon_strike', \
+        elif attacker.ndb.next_combat_action[0] in ['unarmed_strikes', 'melee_weapon_strike', \
                                     'bash']:
             if attacker.ndb.range == 'melee':
                 return # already in preferred range, move on to next step
             if attacker.ndb.footwork < defender.ndb.footwork:
                 # attacker lost footwork battle. use and action and return
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 log_file(f"{attacker.name} tries to move to melee range with \
                          {defender.name}, but fails.", \
                          filename=attacker.ndb.combatlog_filename)
                 attacker.execute_cmd(f"emote tries to move to melee range with \
                          {defender.name}, but fails.")
                 return
-            if attacker.ndb.range == 'grappling':
+            if attacker.ndb.range == 'grapple':
                 # this case shouldn't occur, but we'll add it just for safety sake
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.db.info['Position'] = 'standing'
                 attacker.ndb.range = 'melee'
                 defender.db.info['Position'] = 'standing'
@@ -568,7 +563,7 @@ def run_combat_range_checks(attacker, defender):
             elif attacker.ndb.range == 'ranged':
                 # attacker wants to grapple and won footwork battle, move
                 # both to melee range, use an action
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'melee'
                 defender.ndb.range = 'melee'
                 log_file(f"{attacker.name} closes range to {attacker.ndb.range}.")
@@ -576,27 +571,27 @@ def run_combat_range_checks(attacker, defender):
                 return
             else:
                 # combatants were out of range. Move to ranged
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'ranged'
                 defender.ndb.range = 'ranged'
                 log_file(f"{attacker.name} closes range to {attacker.ndb.range}.")
                 attacker.execute_cmd(f"emote closes range to {attacker.ndb.range}.")
                 return
-        elif a_preferred_action == 'ranged_weapon_strike':
+        elif attacker.ndb.next_combat_action[0] == 'ranged_weapon_strike':
             if attacker.ndb.range == 'ranged':
                 return # already in preferred range, move on to next step
             if attacker.ndb.footwork < defender.ndb.footwork:
                 # attacker lost footwork battle. use and action and return
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 log_file(f"{attacker.name} tries to move to ranged distance with \
                          {defender.name}, but fails.", \
                          filename=attacker.ndb.combatlog_filename)
                 attacker.execute_cmd(f"emote tries to move to ranged distance with \
                          {defender.name}, but fails.")
                 return
-            if attacker.ndb.range == 'grappling':
+            if attacker.ndb.range == 'grapple':
                 # this case shouldn't occur, but we'll add it just for safety sake
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.db.info['Position'] = 'standing'
                 attacker.ndb.range = 'melee'
                 defender.db.info['Position'] = 'standing'
@@ -610,7 +605,7 @@ def run_combat_range_checks(attacker, defender):
             elif attacker.ndb.range == 'melee':
                 # attacker wants to grapple and won footwork battle, move
                 # both to melee range, use an action
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'ranged'
                 defender.ndb.range = 'ranged'
                 log_file(f"{attacker.name} moves away to {attacker.ndb.range}.", \
@@ -619,7 +614,7 @@ def run_combat_range_checks(attacker, defender):
                 return
             else:
                 # combatants were out of range. Move to ranged
-                attacker.ndb.num_of_actions -= 1
+                use_combat_action(attacker)
                 attacker.ndb.range = 'ranged'
                 defender.ndb.range = 'ranged'
                 log_file(f"{attacker.name} closes range to {attacker.ndb.range}.", \
@@ -633,56 +628,49 @@ def apply_defense_bonuses(attacker):
     Use up attacker actions in order to defend. Apply bonuses to defense against
     attacks later by others.
     """
-    log_file("start of defense bonuses func.", filename=attacker.ndb.combatlog_filename)
-    if len(attacker.ndb.next_combat_action) > 0:
-        a_preferred_action = attacker.ndb.next_combat_action[0]
-    else:
-        a_preferred_action = attacker.db.info['Default Attack']
-    if a_preferred_action != 'defend':
-        attacker.ndb.defending_bonus_mod = 1
-        return
-    else:
-        # apply bonuses for defending. 10% per action used
-        attacker.ndb.defending_bonus_mod = 1 + (attacker.ndb.num_of_actions * .1)
-        log_file(f"{attacker.name} uses up {attacker.ndb.num_of_actions}, \
-                 choosing to defend themself.", \
+    # log_file("start of defense bonuses func.", filename=attacker.ndb.combatlog_filename)
+    attacker.ndb.defending_bonus_mod = 1
+    # apply bonuses for defending. 10% per action used
+    for i in range(attacker.ndb.num_of_actions):
+        if attacker.ndb.next_combat_action[0] == 'defend':
+            attacker.ndb.defending_bonus_mod += .1
+            log_file(f"{attacker.name} uses up an action, choosing to defend themself.", \
                  filename=attacker.ndb.combatlog_filename)
-        attacker.execute_cmd(f"emote uses up {attacker.ndb.num_of_actions}, \
-                 choosing to defend themself.")
-        attacker.ndb.num_of_actions = 0
-        return
-
+            attacker.execute_cmd(f"emote uses up an action to defend themself.")
+            use_combat_action(attacker)
+        else:
+            pass
+    return
 
 
 def hit_attempt(attacker, defender):
     """
     This function checks if the attacker hits with their preferred attack type.
     """
-    # TODO: Move this to its own mini func
-    if len(attacker.ndb.next_combat_action) > 0:
-        a_preferred_action = attacker.ndb.next_combat_action[0]
-    else:
-        a_preferred_action = attacker.db.info['Default Attack']
-    log_file("start of hit attempt func.", filename=attacker.ndb.combatlog_filename)
+    # log_file("start of hit attempt func.", filename=attacker.ndb.combatlog_filename)
     # attacker.msg("\n")
     # attacker.location.msg_contents(f"{attacker} tries to hit {defender}.")
-    if a_preferred_action in FLEE_ACTIONS or attacker.db.info['In Combat'] == False or defender.db.info['In Combat'] == False:
+    if attacker.ndb.next_combat_action[0] in FLEE_ACTIONS or attacker.db.info['In Combat'] == False or defender.db.info['In Combat'] == False:
         end_combat(attacker, defender)
         return
-    if a_preferred_action in COMBAT_ACTIONS:
-        attacker.ndb.num_of_actions -= 1
+    if attacker.ndb.next_combat_action[0] in COMBAT_ACTIONS:
+        use_combat_action(attacker)
         # simplified round of combat to ensure everything is working. Replace
         # with real code after testing
-        attack_hit = roll(attacker.ability_scores.Dex.actual, 'flat', attacker.ability_scores.Dex.learn)
-        dodge_roll = roll((defender.ability_scores.Dex.actual * .9), 'flat', defender.ability_scores.Dex.learn)
-        block_roll = roll((defender.ability_scores.Str.actual * .9), 'flat', defender.ability_scores.Str.learn)
+        attack_hit = roll(attacker.ability_scores.Dex.actual, 'flat', attacker.ability_scores.Dex)
+        dodge_roll = roll((defender.ability_scores.Dex.actual * .9), 'flat', defender.ability_scores.Dex)
+        block_roll = roll((defender.ability_scores.Str.actual * .9), 'flat', defender.ability_scores.Str)
+        log_file(f"{attacker.name} attack dice - hit: {attacker.ability_scores.Dex.actual} \
+                 dodge: {defender.ability_scores.Dex.actual * .9} block: \
+                 {defender.ability_scores.Str.actual * .9}", \
+                 filename=attacker.ndb.combatlog_filename)
         log_file(f"{attacker.name} attacks - hit: {attack_hit} dodge: {dodge_roll} block: {block_roll}", filename=attacker.ndb.combatlog_filename)
         if dodge_roll > attack_hit:
             attacker.location.msg_contents(f"{defender.name} dodges the attack of {attacker.name}.")
         elif block_roll > attack_hit:
             attacker.location.msg_contents(f"{defender.name} blocks the attack of {attacker.name}.")
         else:
-            damage = rollsc(attacker.ability_scores.Str.actual)
+            damage = roll(attacker.ability_scores.Str.actual, 'very flat', defender.ability_scores.Str)
             attacker.location.msg_contents(f"{attacker.name} hits {defender.name} for {damage} damage.")
             defender.traits.hp.current -= damage
             log_file(f"{attacker.name} hit {defender.name} for {damage} damage. \
@@ -692,6 +680,21 @@ def hit_attempt(attacker, defender):
                 attacker.location.msg_contents(f"{defender.name} has died. Combat is over!")
                 end_combat(attacker, defender)
             return
+
+
+def use_combat_action(attacker):
+    """
+    Uses up a combat action and pops if off the list if it does not match the
+    default attack.
+    """
+    attacker.ndb.num_of_actions -= 1
+    if attacker.ndb.next_combat_action[0] == attacker.db.info['Default Attack'] and \
+        len(attacker.ndb.next_combat_action) == 1:
+        return
+    else:
+        attacker.ndb.next_combat_action.remove(attacker.ndb.next_combat_action[0])
+        return
+
 
 def end_combat(attacker, defender):
     "Ends combat, cleans up temp variables"
@@ -704,6 +707,37 @@ def end_combat(attacker, defender):
     def_ticker_id = str("attack_tick_%s" % (defender.name))
     log_file(f"Trying to kill ticker: {def_ticker_id}.", filename=attacker.ndb.combatlog_filename)
     tickerhandler.remove(interval=4, callback=defender.at_attack_tick, idstring=def_ticker_id, persistent=False)
+    clean_up_temp_combat_info(attacker, defender)
+    return
+
+
+def clean_up_temp_combat_info(attacker, defender):
+    """
+    Cleans up temporary variables stored on the attacker and defender as temp
+    attributes.
+    """
     del attacker.ndb.next_combat_action
     del defender.ndb.next_combat_action
+    del attacker.ndb.num_of_actions
+    del defender.ndb.num_of_actions
+    del attacker.ndb.defending_bonus_mod
+    del defender.ndb.defending_bonus_mod
+    del attacker.ndb.hp_mod
+    del defender.ndb.hp_mod
+    del attacker.ndb.sp_mod
+    del defender.ndb.sp_mod
+    del attacker.ndb.cp_mod
+    del defender.ndb.cp_mod
+    del attacker.ndb.enc_mod
+    del defender.ndb.enc_mod
+    del attacker.ndb.position_mod
+    del defender.ndb.position_mod
+    del attacker.ndb.range
+    del defender.ndb.range
+    del attacker.ndb.footwork
+    del defender.ndb.footwork
+    del attacker.ndb.groundwork
+    del defender.ndb.groundwork
+    del attacker.ndb.combatlog_filename
+    del defender.ndb.combatlog_filename
     return

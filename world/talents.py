@@ -457,7 +457,8 @@ def apply_talents(character):
             type='static',
             base=character.ability_scores[data['base']].actual,
             mod=0,
-            name=data['name']
+            name=data['name'],
+            extra={'learn' : 0}
         )
 
 

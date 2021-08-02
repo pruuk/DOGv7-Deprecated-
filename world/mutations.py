@@ -80,7 +80,7 @@ _MUTATION_DATA = {
                  "power."),
         'prerequisites': None,
         'starting_score': 'Dex',
-        'range': {'min': 25, 'max': 500}
+        'extra': {'learn' : 0, 'min': 25, 'max': 500}
     },
     'rubber_body': {
         'name': 'Rubber Body',
@@ -93,7 +93,7 @@ _MUTATION_DATA = {
                  "power."),
         'prerequisites': {'mutations.extreme_flexibility.actual': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'improved_balance': {
         'name': 'Improved Balance',
@@ -103,7 +103,7 @@ _MUTATION_DATA = {
                  "a minor effect on the footwork skill."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     # Strength based mutations
     'bone_density': {
@@ -118,7 +118,7 @@ _MUTATION_DATA = {
                  "this score is 25 and the maximum is 1000. 100 is human normal."),
         'prerequisites': None,
         'starting_score': 'Str',
-        'range': {'min': 25, 'max': 1000}
+        'extra': {'learn' : 0, 'min': 25, 'max': 1000}
     },
     # Vitality based mutations
     'increased_regeneration': {
@@ -128,7 +128,7 @@ _MUTATION_DATA = {
                  "rate that a character heals health and stamina."),
         'prerequisites': None,
         'starting_score': 'Vit',
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'regrow_limbs': {
         'name': 'Regrow Limbs',
@@ -137,7 +137,7 @@ _MUTATION_DATA = {
                  "heal egregious wounds, such as losing a limb."),
         'prerequisites': {'mutations.increased_regeneration.actual': 300},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'extra_limbs': {
         'name': 'Extra Limbs',
@@ -149,7 +149,7 @@ _MUTATION_DATA = {
                  "down), the character has a useable extra limb."),
         'prerequisites': {'mutations.regrow_limbs.actual': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 600}
+        'extra': {'learn' : 0, 'min': 0, 'max': 600}
     },
     'wings': {
         'name': 'Wings',
@@ -159,7 +159,7 @@ _MUTATION_DATA = {
                  "prerequisites are met."),
         'prerequisites': {'mutations.extra_limbs.actual': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 600}
+        'extra': {'learn' : 0, 'min': 0, 'max': 600}
     },
     'tail': {
         'name': 'Tail',
@@ -170,7 +170,7 @@ _MUTATION_DATA = {
                  "weapon attacks (like claws)."),
         'prerequisites': {'mutations.extra_limbs.actual': 100},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 300}
+        'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
     'armored_hide': {
         'name': 'Armored Hide',
@@ -181,7 +181,7 @@ _MUTATION_DATA = {
                  "of the character and increases their mass."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 300}
+        'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
     'bladed_body': {
         'name': 'Bladed Body Ridges',
@@ -191,7 +191,7 @@ _MUTATION_DATA = {
                  "cause many grappling attacks to do damage."),
         'prerequisites': {'powers.armored_hide': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 300}
+        'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
     'sharp_claws': {
         'name': 'Sharp Claws',
@@ -202,7 +202,7 @@ _MUTATION_DATA = {
                  "difficult unless the equipment is custom crafted."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'limb_length': {
         'name': 'Limb Length',
@@ -213,7 +213,7 @@ _MUTATION_DATA = {
                  "for certain types of attacks."),
         'prerequisites': None,
         'starting_score': {'rarsc': 100},
-        'range': {'min': 50, 'max': 250}
+        'extra': {'learn' : 0, 'min': 50, 'max': 250}
     },
     'gut_biome': {
         'name': 'Interesting Gut Biome',
@@ -225,7 +225,7 @@ _MUTATION_DATA = {
                  "their own gut."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'poison_bite': {
         'name': 'Poison Bite',
@@ -236,18 +236,18 @@ _MUTATION_DATA = {
                  "requires using a combat talent that involves biting."),
         'prerequisites': {'mutations.gut_biome': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'poison_spit': {
         'name': 'Poison Spit',
         'base': 'Vit',
         'desc': ("|mPoison Spit|n is a mutation that allows a character to"
-                 "inflict a poisonous or bacterially damaging ranged attack "
+                 "inflict a poisonous or bacterially damaging extrad attack "
                  "upon a victim. Please note that effective use of this mutation "
                  "requires using a combat talent that involves spitting."),
         'prerequisites': {'mutations.poison_bite': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'sticky_spit': {
         'name': 'Sticky Spit',
@@ -259,7 +259,7 @@ _MUTATION_DATA = {
                  "spitting."),
         'prerequisites': {'mutations.gut_biome': 300},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'gills': {
         'name': 'Gills',
@@ -269,7 +269,7 @@ _MUTATION_DATA = {
                  "possibly requiring custom armor."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'webbed_feet': {
         'name': 'Webbed Feet',
@@ -280,7 +280,7 @@ _MUTATION_DATA = {
                  "easier for the character, but they will be slower on land."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 300}
+        'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
     'slow_aging': {
         'name': 'Slow Aging',
@@ -290,7 +290,7 @@ _MUTATION_DATA = {
         'prerequisites': {'powers.gut_biome': 400,
                           'mutations.increased_regeneration': 800},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 300}
+        'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
 
     # Perception based mutations
@@ -302,7 +302,7 @@ _MUTATION_DATA = {
                  "chance to dodge and block attacks,  and avoid certain traps."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'visual_sensitivity': {
         'name': 'Visual Sensitivity',
@@ -314,7 +314,7 @@ _MUTATION_DATA = {
                  "being vulnerable to certain attack types involving energy."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'sonic_sensitivity': {
         'name': 'Sonic Sensitivity',
@@ -326,7 +326,7 @@ _MUTATION_DATA = {
                  "vulnerable to certain attack types involving sound."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'tactile_sensitivity': {
         'name': 'Tactile Sensitivity',
@@ -336,7 +336,7 @@ _MUTATION_DATA = {
                  "at the cost of being vulnerable to certain attack types."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'olefactory_sensitivity': {
         'name': 'Olefactory Sensitivity',
@@ -347,7 +347,7 @@ _MUTATION_DATA = {
                  "attack types."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'magnetic_sensitivity': {
         'name': 'Magnetic Sensitivty',
@@ -357,7 +357,7 @@ _MUTATION_DATA = {
                  "power rarely get lost."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'chromatic_flesh': {
         'name': 'Chromatic Flesh',
@@ -367,7 +367,7 @@ _MUTATION_DATA = {
                  "This mutation unlocks talents like natural camo."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     'extrasensory_perception': {
         'name': 'Extrasensory Perception',
@@ -381,7 +381,7 @@ _MUTATION_DATA = {
                  "environments and attack types."),
         'prerequisites': None,
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     },
     # Charisma based mutations
     'psychokinesis': {
@@ -394,7 +394,7 @@ _MUTATION_DATA = {
                  "This mutation unlocks a number of talents."),
         'prerequisites': {'mutations.extrasensory_perception': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 1000}
+        'extra': {'learn' : 0, 'min': 0, 'max': 1000}
     },
     'psychoprojection': {
         'name': 'Psychoprojection',
@@ -405,7 +405,7 @@ _MUTATION_DATA = {
                  "such as astral projection, atomic phasing, invisibility, etc."),
         'prerequisites': {'mutations.extrasensory_perception': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 1000}
+        'extra': {'learn' : 0, 'min': 0, 'max': 1000}
     },
     'malleable_flesh': {
         'name': 'Chromatic Flesh',
@@ -416,7 +416,7 @@ _MUTATION_DATA = {
                  "certain talents such as disguise and aids natural camo."),
         'prerequisites': {'mutations.rubber_body.actual': 200},
         'starting_score': 0,
-        'range': {'min': 0, 'max': 500}
+        'extra': {'learn' : 0, 'min': 0, 'max': 500}
     }
 }
 
@@ -457,7 +457,7 @@ def initialize_mutations(character):
                     base=character.ability_scores[data['base']].actual,
                     mod=0,
                     name=data['name'],
-                    extra=[data['range']]
+                    extra=data['extra']
                 )
             elif data['starting_score'] == {'rarsc': 100}:
                 character.mutations.add(
@@ -466,7 +466,7 @@ def initialize_mutations(character):
                     base=rarsc(100),
                     mod=0,
                     name=data['name'],
-                    extra=[data['range']]
+                    extra=data['extra']
                 )
             else:
                 logger.log_trace("Initialization of one of the mutations failed")

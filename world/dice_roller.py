@@ -26,6 +26,7 @@ progression handler for more details.
 # import
 import numpy as np
 from evennia import logger
+from evennia.utils.logger import log_file
 
 # simpliest check, without criticals
 def return_a_roll_sans_crits(number, dist_shape='normal'):
@@ -105,6 +106,9 @@ def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
             Meirok.ability_scores.Dex.learn
 
     """
+    # log_file(f"Calling dice roller for {ability_skill_or_powers}, which \
+    #                  is type: {type(ability_skill_or_powers)}.", \
+    #                  filename='dice_roller.log')
     # define variables we'll need
     total_roll = 0
     num_of_crits = 1
@@ -119,22 +123,22 @@ def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
         scale = number/15
     elif dist_shape =='very steep':
         scale = number/20
+    # convert args to a list so we can loop through it
+    abil_list = list(ability_skill_or_powers)
     # while loop for rolling until we stop rolling critical successes
     while True:
         this_roll = np.random.default_rng().normal(loc=number, scale=scale)
         total_roll += this_roll/num_of_crits
         # check for rolls that are not critical successes
-        if this_roll <= number + (scale * 2):
+        if this_roll <= number * 1.2:
             # check to make sure the roll is at least 1
             if total_roll < 1:
                 # less than 1 is definitely a critical failure
-                for ability_skill_or_power in ability_skill_or_powers:
-                    learned_something(ability_skill_or_power)
+                learned_something(abil_list)
                 return 1
-            elif this_roll < number - (scale * 2):
+            elif this_roll < number * .8:
                 # critical failure, but over 1
-                for ability_skill_or_power in ability_skill_or_powers:
-                    learned_something(ability_skill_or_power)
+                learned_something(abil_list)
                 return int(total_roll)
             else:
                 return int(total_roll)
@@ -142,15 +146,14 @@ def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
             # critical suceess
             break
         # critical sucess
-        elif this_roll > (number + scale * 2):
-            for ability_skill_or_power in ability_skill_or_powers:
-                learned_something(ability_skill_or_power)
+        elif this_roll > number * 1.2:
+            learned_something(abil_list)
             num_of_crits += 1
         else:
             logger.log_trace("We produced an error with the regular roller.")
 
 
-def learned_something(ability_skill_or_power_learn_attribute):
+def learned_something(abil_list):
     """
     Takes in a single ability, skill, or power. Adds one to the learn attribute
     for that ability score, skill, or power. This should only be called after
@@ -158,7 +161,15 @@ def learned_something(ability_skill_or_power_learn_attribute):
     completion of certain quests.
     """
     try:
-        ability_skill_or_power_learn_attribute += 1
+        for ability_skill_or_power in abil_list:
+            log_file(f"Something was learned about {ability_skill_or_power}",  \
+                             filename='dice_roller.log')
+            log_file(f"Current learn value: {ability_skill_or_power.learn}",  \
+                             filename='dice_roller.log')
+            ability_skill_or_power.learn += 1
+            log_file(f"New learn value: {ability_skill_or_power.learn}",  \
+                             filename='dice_roller.log')
+
     except Exception:
         logger.log_trace(f"We produced an error trying to increase the learning \
                           value on {ability_skill_or_power_learn_attribute}")

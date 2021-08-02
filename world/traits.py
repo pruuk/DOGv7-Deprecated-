@@ -81,7 +81,6 @@ Example:
             type (str): 'static' for static traits
             base (int, float): base value of the trait
             mod Optional(int): modifier value
-            learn Optional(int): counter for attribute progression
             extra Optional(dict): keys of this dict are accessible on the
                 `Trait` object as attributes or dict keys
         Properties:
@@ -282,7 +281,7 @@ class TraitHandler(object):
 
     def add(self, key, name, type='static',
             base=0, mod=0, min=None, max=None,
-            learn=0, extra={}):
+            extra={}):
         """Create a new Trait and add it to the handler."""
         if key in self.attr_dict:
             raise TraitException("Trait '{}' already exists.".format(key))
@@ -292,7 +291,6 @@ class TraitHandler(object):
                          type=type,
                          base=base,
                          mod=mod,
-                         learn=0,
                          extra=extra)
             if min:
                 trait.update(dict(min=min))
@@ -341,8 +339,6 @@ class Trait(object):
             data['base'] = 0
         if not 'mod' in data:
             data['mod'] = 0
-        if not 'learn'in data:
-            data['learn'] = 0
         if not 'extra' in data:
             data['extra'] = {}
         if 'min' not in data:
@@ -352,7 +348,7 @@ class Trait(object):
 
         self._data = data
         self._keys = ('name', 'type', 'base', 'mod',
-                      'current', 'min', 'max', 'learn', 'extra')
+                      'current', 'min', 'max', 'extra')
         self._locked = True
 
         if not isinstance(data, _SaverDict):
@@ -638,11 +634,6 @@ class Trait(object):
         else:
             raise AttributeError(
                 "'current' property is read-only on static 'Trait'.")
-
-    @property
-    def learn(self):
-        "Returns an integer value that is a counter for learning this trait"
-        return int(self._data['learn'])
 
     @property
     def extra(self):

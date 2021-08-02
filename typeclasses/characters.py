@@ -72,30 +72,30 @@ class Character(DefaultCharacter):
         self.mutations.clear()
         # add in the ability scores
         self.ability_scores.add(key='Dex', name='Dexterity', type='static', \
-                        base=rarsc(100), learn=0)
+                        base=rarsc(100), extra={'learn' : 0})
         self.ability_scores.add(key='Str', name='Strength', type='static', \
-                        base=rarsc(100), learn=0)
+                        base=rarsc(100), extra={'learn' : 0})
         self.ability_scores.add(key='Vit', name='Vitality', type='static', \
-                        base=rarsc(100), learn=0)
+                        base=rarsc(100), extra={'learn' : 0})
         self.ability_scores.add(key='Per', name='Perception', type='static', \
-                        base=rarsc(100), learn=0)
+                        base=rarsc(100), extra={'learn' : 0})
         self.ability_scores.add(key='Cha', name='Charisma', type='static', \
-                        base=rarsc(100), learn=0)
+                        base=rarsc(100), extra={'learn' : 0})
         # add in traits for health, stamina, conviction, mass, encumberance
         self.traits.add(key="hp", name="Health Points", type="gauge", \
                         base=((self.ability_scores.Vit.current * 5) + \
-                        (self.ability_scores.Cha.current * 2)))
+                        (self.ability_scores.Cha.current * 2)), extra={'learn' : 0})
         self.traits.add(key="sp", name="Stamina Points", type="gauge", \
                         base=((self.ability_scores.Vit.current * 3) + \
                         (self.ability_scores.Str.current * 2)+ \
-                        (self.ability_scores.Dex.current)))
+                        (self.ability_scores.Dex.current)), extra={'learn' : 0})
         self.traits.add(key="cp", name="Conviction Points", type="gauge", \
                         base=((self.ability_scores.Cha.current * 5) + \
-                        (self.ability_scores.Vit.current)))
+                        (self.ability_scores.Vit.current)), extra={'learn' : 0})
         self.traits.add(key="mass", name="Mass", type='static', \
-                        base=rarsc(180, dist_shape='very flat'))
+                        base=rarsc(180, dist_shape='very flat'), extra={'learn' : 0})
         self.traits.add(key="enc", name="Encumberance", type='static', \
-                        base=0, max=(self.ability_scores.Str.current * .5))
+                        base=0, max=(self.ability_scores.Str.current * .5), extra={'learn' : 0})
         # apply the initial mutations and talents. Most mutations will be set
         # to zero, as will many talents
         talents.apply_talents(self)
