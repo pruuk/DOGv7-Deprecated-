@@ -15,6 +15,7 @@ at_server_cold_start()
 at_server_cold_stop()
 
 """
+from evennia import TICKER_HANDLER as tickerhandler
 
 
 def at_server_start():
@@ -37,7 +38,7 @@ def at_server_reload_start():
     """
     This is called only when server starts back up after a reload.
     """
-    pass
+    tickerhandler.clear()
 
 
 def at_server_reload_stop():

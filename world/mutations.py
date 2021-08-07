@@ -189,7 +189,7 @@ _MUTATION_DATA = {
         'desc': ("|mBladed Body Ridges|n is a mutation that allows a character "
                  "to grow sharp body ridges which can do damage to attackers or "
                  "cause many grappling attacks to do damage."),
-        'prerequisites': {'powers.armored_hide': 200},
+        'prerequisites': {'mutations.armored_hide': 200},
         'starting_score': 0,
         'extra': {'learn' : 0, 'min': 0, 'max': 300}
     },
@@ -287,7 +287,7 @@ _MUTATION_DATA = {
         'base': 'Vit',
         'desc': ("|mSlow Aging|n is a mutation that allows a character to "
                  "manipulate their own aging process, slowing it to a crawl."),
-        'prerequisites': {'powers.gut_biome': 400,
+        'prerequisites': {'mutations.gut_biome': 400,
                           'mutations.increased_regeneration': 800},
         'starting_score': 0,
         'extra': {'learn' : 0, 'min': 0, 'max': 300}
@@ -470,6 +470,18 @@ def initialize_mutations(character):
                 )
             else:
                 logger.log_trace("Initialization of one of the mutations failed")
+        elif data['starting_score'] == 0:
+            character.mutations.add(
+                key=mutation,
+                type='static',
+                base=0,
+                mod=0,
+                name=data['name'],
+                extra=data['extra']
+            )
+        else:
+            logger.log_trace("Initialization of one of the mutations failed")
+
 
 def load_mutation(mutation):
     """

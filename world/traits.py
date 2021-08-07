@@ -673,50 +673,48 @@ class Trait(object):
         "Returns the value formatted as a percentage status bar."
         if self._type in RANGE_TRAITS:
             if self.current * 100.0 / self.max >= 95:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓▓▓▓▓▓|n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓▓▓▓▓▓|n]"
             elif self.current * 100.0 / self.max >= 90:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓▓▓▓▓ |n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓▓▓▓▓ |n]"
             elif self.current * 100.0 / self.max >= 85:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓▓▓▓  |n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓▓▓▓  |n]"
             elif self.current * 100.0 / self.max >= 80:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓▓▓   |n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓▓▓   |n]"
             elif self.current * 100.0 / self.max>= 75:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓▓    |n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓▓    |n]"
             elif self.current * 100.0 / self.max >= 70:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓▓     |n]"
+                return "[|g░░░░░▒▒▒▒▒▓▓     |n]"
             elif self.current * 100.0 / self.max >= 65:
-                return "[|g░░░░░░▒▒▒▒▒▒▓▓      |n]"
+                return "[|g░░░░░▒▒▒▒▒▓      |n]"
             elif self.current * 100.0 / self.max >= 60:
-                return "[|g░░░░░░▒▒▒▒▒▒▓       |n]"
+                return "[|g░░░░░▒▒▒▒▒       |n]"
             elif self.current * 100.0 / self.max >= 55:
-                return "[|y░░░░░░▒▒▒▒▒▒        |n]"
+                return "[|y░░░░░▒▒▒▒▒       |n]"
             elif self.current * 100.0 / self.max >= 50:
-                return "[|y░░░░░░▒▒▒▒▒         |n]"
+                return "[|y░░░░░▒▒▒▒        |n]"
             elif self.current * 100.0 / self.max >= 45:
-                return "[|y░░░░░░▒▒▒▒          |n]"
+                return "[|y░░░░░▒▒▒         |n]"
             elif self.current * 100.0 / self.max >= 40:
-                return "[|y░░░░░░▒▒▒           |n]"
+                return "[|y░░░░░▒▒          |n]"
             elif self.current * 100.0 / self.max >= 35:
-                return "[|y░░░░░░▒▒            |n]"
+                return "[|y░░░░░▒           |n]"
             elif self.current * 100.0 / self.max >= 30:
-                return "[|y░░░░░░▒             |n]"
+                return "[|y░░░░░            |n]"
             elif self.current * 100.0 / self.max >= 25:
-                return "[|r░░░░░░              |n]"
-            elif self.current * 100.0 / self.max >= 25:
-                return "[|r░░░░░               |n]"
+                return "[|r░░░░░            |n]"
             elif self.current * 100.0 / self.max >= 20:
-                return "[|R░░░░                |n]"
+                return "[|R░░░░             |n]"
             elif self.current * 100.0 / self.max >= 15:
-                return "[|R░░░                 |n]"
+                return "[|R░░░              |n]"
             elif self.current * 100.0 / self.max >= 10:
-                return "[|R░░                  |n]"
+                return "[|R░░               |n]"
             elif self.current * 100.0 / self.max >= 5:
-                return "[|R░                   |n]"
+                return "[|R░                |n]"
             elif self.current <= 0:
-                return "[|R                    |n]"
+                return "[|R                 |n]"
         # if we get to this point, it's either a static trait or
         # a divide by zero situation
-        return "[default|g░░░░░░▒▒▒▒▒▒▓▓▓▓▓▓▓▓|n]"
+        return "[default|g░░░░░▒▒▒▒▒▓▓▓▓▓▓▓|n]"
 
     # Private members
 

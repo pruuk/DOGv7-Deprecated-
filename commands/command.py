@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Commands
 
@@ -293,6 +294,10 @@ class CmdPrompt(Command):
                 tar_hp = self.caller.db.info['Target'].traits.hp.percent_bar()
                 tar_sp = self.caller.db.info['Target'].traits.sp.percent_bar()
                 tar_position = self.caller.db.info['Target'].db.info['Position']
-                prompt = "Health:%s Stamina:%s Conviction:%s <%s>    |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,tar_name,tar_hp,tar_sp, tar_position)
+                if self.caller.ndb.range:
+                    range = self.caller.ndb.range
+                    prompt = "Health:%s Stamina:%s Conviction:%s <%s> Range: %s   |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,range,tar_name,tar_hp,tar_sp, tar_position)
+                else:
+                    prompt = "Health:%s Stamina:%s Conviction:%s <%s>    |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,tar_name,tar_hp,tar_sp, tar_position)
         self.caller.db.promptchoice = 'standard'
         self.caller.msg(prompt=prompt)

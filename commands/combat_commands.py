@@ -8,7 +8,6 @@ from evennia import CmdSet
 from evennia import default_cmds
 from evennia import create_script
 from evennia import utils
-from world.combat_rules import hit_attempt
 from evennia import TICKER_HANDLER as tickerhandler
 import random
 from evennia import search_object
@@ -39,84 +38,55 @@ class CmdAttack(Command):
 
     def func(self):
         "Handle command"
-        caller = self.caller
         if not self.args:
-            if self.caller.db.info['Target'] != None:
-                if self.caller.location != self.caller.db.info['Target'].location:
-                    self.caller.msg("Target not in room. Usage: attack <valid target>")
-                    return
-                else:
-                    self.build_tickers(self.caller, self.caller.db.info['Target'])
-                    return
-            else:
-                self.caller.msg("Usage: attack <target>")
-                return
+            self.caller.msg("Usage: attack <target>")
+            return
+        target = self.caller.search(self.args)
+        if not target:
+            return
         else:
-            target = self.caller.search(self.args.strip())
-            if not target:
-                self.caller.msg("Target not in room. Usage: attack <valid target>")
-                return
-            else:
-                self.caller.db.info['Target'] = target
+            self.caller.db.info['Target'] = target
         # set up combat
-        attacker = self.caller
-        defender = self.caller.db.info['Target']
-        if self.caller.location.db.nocombatroom != True:
-            self.build_tickers(attacker, defender)
+        if target.ndb.combat_handler:
+            # target is already in combat - join it
+            log_file(f"{target.name} already in combat. {self.name} joining \
+                     combat using handler: {target.ndb.combat_handler}", \
+                     filename='combat.log')
+            target.ndb.combat_handler.add_character(self.caller)
+            target.ndb.combat_handler.msg_all("%s joins combat!" % self.caller)
         else:
-            self.caller.msg("Combat is not allowed in this room.")
+            # create a new combat handler
+            log_file("New combat. creating handler script", \
+                     filename='combat.log')
+            # set range per preferred attack
+            if self.caller.db.info['Default Attack'] in ['unarmed_strike', \
+                              'melee_weapon_strike', 'bash', 'grapple',]:
+                self.caller.ndb.range = 'melee'
+            elif self.caller.db.info['Default Attack'] in ['ranged_weapon_strike', \
+                              'mental_attack', 'taunt', 'defend']:
+                self.caller.ndb.range = 'ranged'
+            else:
+                self.caller.ndb.range = 'out_of_range'
+            # set target if not set
+            if self.caller.db.info['Target'] == None:
+                self.caller.db.info['Target'] = target
+            # matching target range with caller since they weren't in combat
+            target.ndb.range = self.caller.ndb.range
+            # matching target's target to caller
+            target.db.info['Target'] = self.caller
+            # make combat handler
+            chandler = create_script("combat_handler.CombatHandler")
+            chandler.add_character(self.caller)
+            chandler.add_character(target)
+            self.caller.msg("You attack %s! You are in combat." % target)
+            target.msg("%s attacks you! You are in combat." % self.caller)
+            log_file(f"New handler script: {chandler.name}", \
+                     filename='combat.log')
+            log_file(f"Script created. Chars add: {chandler.db.characters}.", \
+                     filename='combat.log')
 
-
-    def build_tickers(self, attacker, defender):
-        ## Add tickerhandlers for self and target (if they're
-        ## not already in combat.
-        ## Building attacker ticker
-        attacker.db.info['In Combat'] = True
-        ticker_id = str("attack_tick_%s" % attacker.name)
-        tickerhandler.add(interval=4, callback=attacker.at_attack_tick, idstring=ticker_id, persistent=False)
-        attacker.msg(f"You attack {defender}.")
-        # Build the log file and establish the start of combat. Set references on
-        # combatants so they can write to the same log file for the same combat
-        # event.
-        logfile_name_string = f"combat_log_{attacker.name}_{gametime.gametime()}"
-        attacker.ndb.combatlog_filename = logfile_name_string
-        defender.ndb.combatlog_filename = logfile_name_string
-        log_file(f"{attacker.name} attacked {defender.name}", filename=logfile_name_string)
-        attacker.cmdset.add("commands.combat_commands.CombatCmdSet")
-        attacker.ndb.next_combat_action = []
-        attacker.ndb.defending_bonus_mod = 1
-        # set initial combat range in a temp variable
-        if attacker.db.info['Default Attack'] == 'grapple':
-            attacker.ndb.range = 'grapple'
-        elif attacker.db.info['Default Attack'] in ['unarmed_strikes', \
-            'melee_weapon_strike', 'bash', 'defend']:
-            attacker.ndb.range = 'melee'
-        elif attacker.db.info['Default Attack'] in ['ranged_weapon_strike', \
-            'mental_attack', 'taunt']:
-            attacker.ndb.range = 'ranged'
-        else:
-            attacker.ndb.range = 'out_of_range'
-        ## Build defender ticker if they're not in combat already
-        if defender.db.info['In Combat'] == False or defender.db.info['Target'] == attacker:
-            defender.db.info['Target'] = attacker
-            defender.db.info['In Combat'] = True
-            defender.ndb.range = attacker.ndb.range
-            ticker_id = str("attack_tick_%s" % defender.name)
-            tickerhandler.add(interval=4, callback=defender.at_attack_tick, idstring=ticker_id, persistent=False)
-            # defender.execute_cmd("emote is defending themselves!")
-            defender.ndb.next_combat_action = []
-            defender.ndb.defending_bonus_mod = 1
-            defender.cmdset.add("commands.combat_commands.CombatCmdSet")
-        else:
-            if defender.ndb.range is not None:
-                defender.ndb.range = attacker.ndb.range
-            if defender.ndb.next_combat_action is not None:
-                defender.ndb.next_combat_action = []
-            if defender.defending_bonus_mod is not None:
-                defender.ndb.defending_bonus_mod = 1
-            if defender.db.info['Target'] is not None:
-                defender.db.info['Target'] = attacker
-        return
+COMBAT_ACTIONS = ('unarmed_strike', 'melee_weapon_strike', 'bash', 'grapple', \
+                  'ranged_weapon_strike', 'mental_attack', 'taunt', 'defend')
 
 
 class CmdDisengage(Command):
@@ -124,7 +94,7 @@ class CmdDisengage(Command):
     Tries to disengage from combat.
 
     Usage:
-      disengage
+        disengage
 
     """
     key = "disengage"
@@ -134,10 +104,9 @@ class CmdDisengage(Command):
     def func(self):
         "Implements the command"
         caller = self.caller
-        # self.caller.db.toggles['In Combat'] = False
+        # self.caller.db.info['In Combat'] = False
         self.caller.msg("You try to disengage from combat.")
-        self.caller.ndb.next_combat_action.insert(0, "disengage")
-        self.caller.db.info['In Combat'] = False
+        self.ndb.combat_handler.add_action("disengage", self.caller, None)
 
 
 class CmdFlee(Command):
@@ -145,7 +114,7 @@ class CmdFlee(Command):
     Tries to flee to an adjacent room.
 
     Usage:
-      flee
+        flee
 
     Aliases:
         escape
@@ -159,12 +128,265 @@ class CmdFlee(Command):
         "Implements the command"
         caller = self.caller
         self.caller.db.info['In Combat'] = False
-        self.caller.ndb.next_combat_action.insert(0, "flee")
+        self.ndb.combat_handler.add_action("flee", self.caller, None)
         exits = []
         for exit in self.caller.location.exits:
             exits.append(exit)
         self.caller.cmdset.delete("commands.combat_commands.CombatCmdSet")
         utils.delay(1,self.caller.execute_cmd(f"{random.choice(exits)}"))
+
+
+class CmdYield(Command):
+    """
+    Tries to yield to your current opponent. This will only be successful if the
+    opponent has mercy enabled.
+
+    Usage:
+        yield
+
+    """
+    key = "yield"
+    help_category = "Combat"
+
+    def func(self):
+        "Implements the command"
+        caller = self.caller
+        self.caller.msg("You attempt to yield.")
+        self.ndb.combat_handler.add_action("yield", self.caller, None)
+
+
+class CmdDefend(Command):
+    """
+    Forgoes attacking in favor of just trying to defend. This will spend your
+    combat actions just like attacking would, but will provide a defense bonus
+    until your next combat round.
+
+    Usage:
+        defend
+
+    """
+    key = "defend"
+    help_category = "Combat"
+
+    def func(self):
+        "Implements the command"
+        caller = self.caller
+        self.caller.msg("You attempt to defend.")
+        self.ndb.combat_handler.add_action("defend", self.caller, None)
+
+
+class CmdTarget(Command):
+    """
+    This command allows a character to set another
+    character or NPC as their default target for later
+    actions by default. This is also called when combat
+    is initiated by commands like "kill <target>".
+
+    Usage:
+        target <target>
+
+    """
+    key = "target"
+    help_category = "Combat"
+
+    def func(self):
+        "Sets the caller's default target"
+        caller = self.caller
+        if not self.args:
+            self.caller.msg('Please input a valid target')
+        else:
+            if self.caller.search(self.args):
+                self.caller.db.info['Target'] = self.caller.search(self.args)
+                self.caller.msg(f"Target set to: {self.caller.db.info['Target']}")
+            else:
+                self.caller.msg("That is not a valid target")
+
+
+class CmdDefaultAttack(Command):
+    """
+    This command allows a character to set their default command, For example,
+    the player could choose to default to 'defend' instead of 'unarmed strike'.
+    A total pacifist could even default to 'flee' (this is not recommended).
+
+    Usage:
+        default <default attack>
+
+    Valid examples:
+        default unarmed_strike
+        default melee_weapon_strike
+        default bash
+        default grapple
+        default ranged_weapon_strike
+        default mental_attack
+        default taunt
+        default defend
+        default disengage
+        default flee
+        default yield
+
+
+    """
+    key = "default"
+    help_category = "Combat"
+
+    def func(self):
+        "Sets the default attack option"
+        caller = self.caller
+        valid_defaults = ['unarmed_strike', 'melee_weapon_strike', 'bash', \
+                          'grapple', 'ranged_weapon_strike', 'mental_attack', \
+                          'taunt', 'defend', 'disengage', 'flee', 'yield',]
+
+        if self.args:
+            self.caller.msg(f"You set your default attack as:{self.args}")
+            self.caller.db.info['Default Attack'] = self.args.lstrip()
+        else:
+            self.caller.msg('Please input a valid default attack. See help default')
+            self.caller.msg(f'You tried default{self.args}')
+
+
+class CmdConsider(Command):
+    """
+    Allows the character or NPC to estimate the relative values of certain
+    attaributes in a comparison between themself and the target. Some NPCs
+    consider being considered offensive.
+    Consider returns three text messages:
+        - A comparison of the force of your conviction and the target's
+        - A comparison of vigor (health + stamina)
+        - A comparison of mass
+
+    Usage:
+        consider <target>
+
+    Aliases:
+        con <target>
+
+    """
+    key = "consider"
+    aliases = ['con']
+    help_category = "Combat"
+
+    def func(self):
+        "Implements the command"
+        if not self.args:
+            self.caller.msg("Usage: consider <target>")
+            return
+        else:
+            target = self.caller.search(self.args.strip())
+            if not target:
+                self.caller.msg("Target not in room. Usage: consider <valid target>")
+                return
+            # check to ensure target inherits from character class
+            if not utils.inherits_from(target, 'typeclasses.npcs.NPC') and \
+               not utils.inherits_from(target, 'typeclasses.characters.Character') and \
+               not utils.inherits_from(target, 'typeclasses.npcs.Humanoid_NPC'):
+                self.caller.msg("You can only compare yourself to other character or NPCs.")
+                log_file(f"Consider command failed. {target.name} checked as non \
+                         character/non-NPC. type: {type(target)}", \
+                         filename='error.log')
+                return
+        # get the info from the target of the command and compare it to caller
+        conv_str = self.compare_values('force of your will', self.caller.traits.cp.current, \
+                                  target.traits.cp.current)
+        vigor_str = self.compare_values('vigor', self.caller.traits.hp.current + \
+                                    self.caller.traits.sp.current, \
+                                    target.traits.hp.current + \
+                                    target.traits.sp.current,)
+        mass_str = self.compare_values('mass', self.caller.traits.mass.current, \
+                                  target.traits.mass.current)
+        self.caller.execute_cmd(f"emote sizes up {target.name}.")
+        self.caller.msg(f"\tThe |h|!W{conv_str}|n {target.name}'s.")
+        self.caller.msg(f"\tYour |h|!W{vigor_str}|n {target.name}'s.")
+        self.caller.msg(f"\tYour |h|!W{mass_str}|n {target.name}'s.")
+
+
+    def compare_values(self, attribute_name, caller_attribute_value, target_attribute_value):
+        # generic compare func. returns a text string
+        compare_description = ''
+        if caller_attribute_value > target_attribute_value * 5:
+            compare_description = f"{attribute_name} is vastly superior to"
+        elif caller_attribute_value > target_attribute_value * 2.5:
+            compare_description = f"{attribute_name} is superior to"
+        elif caller_attribute_value > target_attribute_value * 1.1:
+            compare_description = f"{attribute_name} is greater than"
+        elif caller_attribute_value * 5 < target_attribute_value:
+            compare_description = f"{attribute_name} is vastly inferior to"
+        elif caller_attribute_value * 2.5 < target_attribute_value:
+            compare_description = f"{attribute_name} is inferior to"
+        elif caller_attribute_value * 1.1 < target_attribute_value:
+            compare_description = f"{attribute_name} is less than"
+        else:
+            compare_description = f"{attribute_name} is roughly the same as"
+        return compare_description
+
+
+class CmdStrike(Command):
+    """
+    Use the next combat action to try to do an unarmed strike.
+
+    Usage:
+        strike
+
+    Aliases:
+        unarmed
+
+    """
+    key = "strike"
+    aliases = ['unarmed']
+    help_category = "Combat"
+
+    def func(self):
+        "Implements the command"
+        caller = self.caller
+        self.caller.msg("You attempt to use unarmed strikes.")
+        self.caller.ndb.next_combat_action.insert(0, "unarmed_strike")
+
+
+class CmdGrapple(Command):
+    """
+    Use the next combat action to try to do a grappling attack.
+    If you are currently in a standing position, you'll try to clinch your
+    opponent or take them down. If you're already in a grappling position,
+    you'll do one of two actions: try to improve your position or attempt
+    a submission until you reach an advantage. Once you're in an advantageous
+    ground position, the grapple command occasionally does unarmed strikes as
+    well. The position you are currently in greatly affects the chance of a
+    successful submission and some unarmed strikes.
+
+    Usage:
+        grapple
+
+    Aliases:
+        grappling
+        wrestle
+        wrestling
+
+    """
+    key = "grapple"
+    aliases = ['grappling', 'wrestle', 'wrestling']
+    help_category = "Combat"
+
+    def func(self):
+        "Implements the command"
+        caller = self.caller
+        self.caller.msg("You attempt to grapple.")
+        self.caller.ndb.next_combat_action.insert(0, "grapple")
+
+
+class CombatRelatedCmdSet(CmdSet):
+    """
+    Adds the set of commands a player or NPC object that are related to combat,
+    but are available both inside and outside combat.
+    """
+    key = "combat_related_cmdset"
+    mergetype = "Union" # we'll use this for now. Maybe we will use something else later
+    priority = 10
+    no_exits = False
+    def at_cmdset_creation(self):
+        self.add(CmdAttack())
+        self.add(CmdConsider())
+        self.add(CmdDefaultAttack())
+        self.add(CmdTarget())
+
 
 
 class CombatCmdSet(CmdSet):
@@ -178,6 +400,11 @@ class CombatCmdSet(CmdSet):
     no_exits = True # stops the combatant from fleeing by just moving
 
     def at_cmdset_creation(self):
-        self.add(CmdAttack())
         self.add(CmdDisengage())
         self.add(CmdFlee())
+        self.add(CmdYield())
+        self.add(CmdDefend())
+        self.add(CmdDefaultAttack())
+        self.add(CmdTarget())
+        self.add(CmdStrike())
+        self.add(CmdGrapple())

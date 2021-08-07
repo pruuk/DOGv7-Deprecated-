@@ -11,10 +11,11 @@ from evennia import DefaultCharacter
 from evennia.utils import lazy_property
 from world.equip import EquipHandler
 from world.traits import TraitHandler
+from world.dice_roller import return_a_roll as roll
 from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
-from world.combat_rules import resolve_combat_actions
 from evennia.utils.logger import log_file
+from evennia import gametime
 
 
 class Character(DefaultCharacter):
@@ -130,7 +131,7 @@ class Character(DefaultCharacter):
             'wield2': None
         }
         # Add in info db to store other useful tidbits we'll need
-        self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strikes', \
+        self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strike', \
                         'In Combat': False, 'Position': 'standing', \
                         'Wimpy': 100, 'Yield': 200, 'Title': None}
         # money
@@ -164,22 +165,15 @@ class Character(DefaultCharacter):
             self.traits.mass.mod = item.db.mass
 
 
-    def calc_combat_modifiers(self):
+    def calc_status_modifiers(self):
         """
         Rerun all the calculations for combat modifiers and store them as temp
         variables on the character.
         """
-        self.calculate_encumberance()
         # modifiers for health/stamina/conviction
         self.ndb.hp_mod = ((self.traits.hp.current / self.traits.hp.max) ** .15)
         self.ndb.sp_mod = ((self.traits.sp.current / self.traits.sp.max) ** .15)
         self.ndb.cp_mod = ((self.traits.cp.current / self.traits.cp.max) ** .15)
-
-
-    def calc_position_modifier(self):
-        """
-        Recalculate current modifier for position for combat actions.
-        """
         position = self.db.info['Position']
         # ground positions listed from best to worst
         if position == 'tbmount': # mounted opponent and taken their back
@@ -230,53 +224,82 @@ class Character(DefaultCharacter):
                               typeclasses.characters.Character.calc_position_modifier()")
 
 
+    def calc_footwork_and_groundwork_mods(self):
+        """
+        Runs calculations for footwork and groundwork rolls at the start of
+        combat round and applies these to a temp variable on self.
+        """
+        # checks to ensure temp vars we need have been set. If not, run calcs
+        log_file(f"start of foot/groundwork calc func for {self.name}", \
+                 filename='combat.log')
+        # calc groundwork ratio
+        groundwork_dice = (self.talents.grappling.actual + \
+                           self.traits.mass.actual) * \
+                           self.ndb.position_mod * \
+                           self.ndb.hp_mod * \
+                           self.ndb.sp_mod * self.ndb.cp_mod * \
+                           self.ndb.enc_mod
+        self.ndb.groundwork_mod = (roll(groundwork_dice, 'flat', \
+                                  self.ability_scores.Dex, \
+                                  self.talents.grappling)) / 250
+        # calc footwork ratio
+        footwork_dice = self.talents.footwork.actual * \
+                        self.ndb.position_mod * self.ndb.hp_mod * \
+                        self.ndb.sp_mod * self.ndb.cp_mod * \
+                        self.ndb.enc_mod
+        self.ndb.footwork_mod = (roll(footwork_dice, 'flat', \
+                                self.ability_scores.Dex, \
+                                self.talents.footwork)) / 100
+        return
+
+
+    def populate_num_combat_actions(self):
+        """
+        Rolls to determine the number of actions the character can perform during
+        this round of combat.
+        """
+        log_file(f"start of num of combat actions function for {self.name}.", \
+                 filename='combat.log')
+        # listing out modifiers for readbility
+        actions_roll = ((self.ability_scores.Dex.actual + \
+                         self.ability_scores.Vit.actual) * \
+                         self.ndb.enc_mod)
+        log_file(f"{self.name} rolling {actions_roll} for actions. This \
+                 will be divided by 100 and then rounded.", filename='combat.log')
+        self.ndb.num_of_actions = round((roll(actions_roll, 'very flat', \
+                                       self.ability_scores.Dex, \
+                                       self.ability_scores.Vit)) / 100)
+        log_file(f"{self.name} gets {self.ndb.num_of_actions} actions.", \
+                 filename='combat.log')
+                 
+
     def check_wimpyield(self):
         """
         Check if character has fallen below their wimpy or yield thresholds. If
         they have, change next combat action to the appropriate action.
         """
-        # TODO: Remove these emotes once we've moved the flee/yield to
-        # commands
+        log_file(f"start of wimpy/yield check for {self.name}.", filename='combat.log')
         if self.traits.hp.current <= self.db.info['Wimpy']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'flee')
-            else:
-                self.ndb.next_combat_action = ['flee']
-            self.execute_cmd("emote is severely wounded and tries to flee.")
+            self.execute_cmd('flee')
+            log_file(f"{self.name} is fleeing (hps).", filename='combat.log')
         elif self.traits.hp.current <= self.db.info['Yield']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'yield')
-            else:
-                self.ndb.next_combat_action = ['yield']
-            # self.execute_cmd("emote is heavily wounded and tries to yield.")
+            self.execute_cmd('yield')
+            log_file(f"{self.name} is yielding (hps).", filename='combat.log')
         elif self.traits.sp.current <= self.db.info['Wimpy']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'flee')
-            else:
-                self.ndb.next_combat_action = ['flee']
-            self.execute_cmd("emote is severely exhausted and tries to flee.")
+            self.execute_cmd('flee')
+            log_file(f"{self.name} is fleeing(sps).", filename='combat.log')
         elif self.traits.sp.current <= self.db.info['Yield']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'yield')
-            else:
-                self.ndb.next_combat_action = ['yield']
-            # self.execute_cmd("emote is exhausted and tries to yield.")
+            self.execute_cmd('yield')
+            log_file(f"{self.name} is yielding (sps).", filename='combat.log')
         elif self.traits.hp.current <= self.db.info['Wimpy']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'flee')
-            else:
-                self.ndb.next_combat_action = ['flee']
-            self.execute_cmd("emote has zero will to fight and tries to flee.")
+            self.execute_cmd('flee')
+            log_file(f"{self.name} is fleeing(cps).", filename='combat.log')
         elif self.traits.hp.current <= self.db.info['Yield']:
-            if len(self.ndb.next_combat_action) > 0:
-                self.ndb.next_combat_action.insert(0, 'yield')
-            else:
-                self.ndb.next_combat_action = ['yield']
-            # self.execute_cmd("emote has no will to fight and tries to yield.")
+            self.execute_cmd('yield')
+            log_file(f"{self.name} is yielding (cps).", filename='combat.log')
         else:
-            # adding a debugging line to see if we're getting to here.
-            # self.execute_cmd("emote is still in fighting shape and spirit.")
-            pass
+            log_file(f"{self.name} is not fleeing or yielding.", filename='combat.log')
+        return
 
 
     def at_attack_tick(self):
@@ -286,15 +309,23 @@ class Character(DefaultCharacter):
         to the world rules function for handling combat hit attempts
         It will default to "hit", the standard attack.
         """
-        self.execute_cmd("rprom")
+        log_file(f"at_attack_tick firing for {self.name}.", filename='combat.log')
         if self.db.info['In Combat'] == True and self.db.info['Target'] is not None:
-            log_file(f"{self.name} firing at_attack_tick func. Calling hit_attempt func from world.combat_rules", filename=self.ndb.combatlog_filename)
-            # self.execute_cmd(f"emote is attacking {self.db.info['Target'].name}")
-            if len(self.ndb.next_combat_action) > 0:
-                resolve_combat_actions(self, self.db.info['Target'])
-            else:
-                resolve_combat_actions(self, self.db.info['Target'])
+            log_file(f"{self.name} Calling combat \
+                     validity rules, which will create a script to take combat \
+                     actions if combat is valid. ", filename='combat.log')
+            refresh_combat_temp_vars(self, self.db.info['Target'])
+            # setting target to None for debugging purposes
+            self.db.info['In Combat'] = False
+            self.db.info['Target'] = None
+            log_file("setting in combat to false and target to none so that the \
+                     next tick kills the ticker.", filename='combat.log')
+        elif self.db.info['In Combat'] == False or self.db.info['Target'] is None:
+            att_ticker_id = str("attack_tick_%s" % (self.name))
+            log_file(f"Trying to kill ticker: {att_ticker_id}.", filename='combat.log')
+            tickerhandler.remove(interval=5, callback='at_attack_tick', idstring=def_ticker_id, persistent=False)
+            log_file("Attack ticker killed.", filename='combat.log')
+            #TODO: Write a cleanup func for all the temp vars
         else:
-            ticker_id = str("attack_tick_%s" % self.name)
-            tickerhandler.remove(interval=4, callback=self.at_attack_tick, idstring=ticker_id, persistent=False)
-            self.db.ndb.next_combat_action = []
+            log_file("Weird if/else error in at_attack_func on character", \
+                     filename='error.log')
