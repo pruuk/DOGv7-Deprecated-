@@ -51,13 +51,13 @@ class CmdAttack(Command):
             # target is already in combat - join it
             log_file(f"{target.name} already in combat. {self.name} joining \
                      combat using handler: {target.ndb.combat_handler}", \
-                     filename='combat.log')
+                     filename='combat_step.log')
             target.ndb.combat_handler.add_character(self.caller)
             target.ndb.combat_handler.msg_all("%s joins combat!" % self.caller)
         else:
             # create a new combat handler
             log_file("New combat. creating handler script", \
-                     filename='combat.log')
+                     filename='combat_step.log')
             # set range per preferred attack
             if self.caller.db.info['Default Attack'] in ['unarmed_strike', \
                               'melee_weapon_strike', 'bash', 'grapple',]:
@@ -81,9 +81,9 @@ class CmdAttack(Command):
             self.caller.msg("You attack %s! You are in combat." % target)
             target.msg("%s attacks you! You are in combat." % self.caller)
             log_file(f"New handler script: {chandler.name}", \
-                     filename='combat.log')
+                     filename='combat_step.log')
             log_file(f"Script created. Chars add: {chandler.db.characters}.", \
-                     filename='combat.log')
+                     filename='combat_step.log')
 
 COMBAT_ACTIONS = ('unarmed_strike', 'melee_weapon_strike', 'bash', 'grapple', \
                   'ranged_weapon_strike', 'mental_attack', 'taunt', 'defend')
@@ -106,7 +106,9 @@ class CmdDisengage(Command):
         caller = self.caller
         # self.caller.db.info['In Combat'] = False
         self.caller.msg("You try to disengage from combat.")
-        self.ndb.combat_handler.add_action("disengage", self.caller, None)
+        log_file(f"Attempting to add disengage to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("disengage", self.caller)
 
 
 class CmdFlee(Command):
@@ -127,13 +129,11 @@ class CmdFlee(Command):
     def func(self):
         "Implements the command"
         caller = self.caller
-        self.caller.db.info['In Combat'] = False
-        self.ndb.combat_handler.add_action("flee", self.caller, None)
-        exits = []
-        for exit in self.caller.location.exits:
-            exits.append(exit)
-        self.caller.cmdset.delete("commands.combat_commands.CombatCmdSet")
-        utils.delay(1,self.caller.execute_cmd(f"{random.choice(exits)}"))
+        self.caller.msg("You attempt to flee.")
+        log_file(f"Attempting to add flee to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("flee", self.caller)
+
 
 
 class CmdYield(Command):
@@ -152,7 +152,9 @@ class CmdYield(Command):
         "Implements the command"
         caller = self.caller
         self.caller.msg("You attempt to yield.")
-        self.ndb.combat_handler.add_action("yield", self.caller, None)
+        log_file(f"Attempting to add yield to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("yield", self.caller)
 
 
 class CmdDefend(Command):
@@ -172,7 +174,9 @@ class CmdDefend(Command):
         "Implements the command"
         caller = self.caller
         self.caller.msg("You attempt to defend.")
-        self.ndb.combat_handler.add_action("defend", self.caller, None)
+        log_file(f"Attempting to add defend to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("defend", self.caller)
 
 
 class CmdTarget(Command):
@@ -338,7 +342,9 @@ class CmdStrike(Command):
         "Implements the command"
         caller = self.caller
         self.caller.msg("You attempt to use unarmed strikes.")
-        self.caller.ndb.next_combat_action.insert(0, "unarmed_strike")
+        log_file(f"Attempting to add unarmed_strike to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("unarmed_strike", self.caller)
 
 
 class CmdGrapple(Command):
@@ -369,7 +375,9 @@ class CmdGrapple(Command):
         "Implements the command"
         caller = self.caller
         self.caller.msg("You attempt to grapple.")
-        self.caller.ndb.next_combat_action.insert(0, "grapple")
+        log_file(f"Attempting to add grapple to {self.caller.ndb.combat_handler} for {self.caller}",
+                 filename='combat_step.log')
+        self.caller.ndb.combat_handler.add_action("grapple", self.caller)
 
 
 class CombatRelatedCmdSet(CmdSet):

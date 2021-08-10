@@ -63,8 +63,8 @@ def combat_action_picker(character, action):
     The combat_action script will be spawned by the combat handler. All this
     function does is determine which action type is to be attempted.
     """
-    log_file("start of combat_action_picker func", filename='combat.log')
-
+    log_file("start of combat_action_picker func", filename='combat_step.log')
+    log_file(f"{character.name} action: {action}", filename='combat_step.log')
     # grappling is the most complicated case. Moved it to its own funcion
     if action == 'grapple':
         grappling_action = resolve_grappling_action(character, action)
@@ -114,6 +114,12 @@ def combat_action_picker(character, action):
                 # strike some of the time, but move away most of the time
                 actions_list = [actions_dict[26], actions_dict[17]]
                 return str(random.choices(actions_list, weights(50, 50), k=1))
+            elif action == 'flee':
+                return actions_dict[23]
+            elif action == 'yield':
+                return actions_dict[22]
+            elif action == 'disengage':
+                return actions_dict[24]
             else:
                 log_file(f"unknown decision tree for {character.name} while in \
                          range: {character.ndb.range} and \
@@ -138,11 +144,17 @@ def combat_action_picker(character, action):
                 # strike some of the time, but move away most of the time
                 actions_list = [actions_dict[26], actions_dict[17]]
                 return str(random.choices(actions_list, weights(25, 75), k=1))
+            elif action == 'flee':
+                return actions_dict[23]
+            elif action == 'yield':
+                return actions_dict[22]
+            elif action == 'disengage':
+                return actions_dict[24]
             else:
                 log_file(f"unknown decision tree for {character.name} while in \
                          range: {character.ndb.range} and \
                          position: {character.db.info['Position']}. \
-                         Desired action: {action}",
+                         Desired action: {action}", \
                          filename='error.log')
     elif character.ndb.range == 'melee':
         if character.db.info['Position'] in ['sitting', 'supine', 'prone', \
@@ -163,6 +175,12 @@ def combat_action_picker(character, action):
             return actions_dict[17]
         elif action == 'defend':
             return actions_dict[18]
+        elif action == 'flee':
+            return actions_dict[23]
+        elif action == 'yield':
+            return actions_dict[22]
+        elif action == 'disengage':
+            return actions_dict[24]
         else:
             log_file(f"unknown decision tree for {character.name} while in \
                      range: {character.ndb.range} and \
@@ -180,6 +198,12 @@ def combat_action_picker(character, action):
             return actions_dict[17]
         elif action == 'defend':
             return actions_dict[18]
+        elif action == 'flee':
+            return actions_dict[23]
+        elif action == 'yield':
+            return actions_dict[22]
+        elif action == 'disengage':
+            return actions_dict[24]
         elif action in ['unarmed_strike', 'melee_weapon_strike', 'bash', 'grapple']:
             return actions_dict[25]
         else:
@@ -191,6 +215,12 @@ def combat_action_picker(character, action):
     elif character.ndb.range == 'out_of_range':
         if action == 'taunt':
             return actions_dict[17]
+        elif action == 'flee':
+            return actions_dict[23]
+        elif action == 'yield':
+            return actions_dict[22]
+        elif action == 'disengage':
+            return actions_dict[24]
         else:
             return actions_dict[25]
     else:

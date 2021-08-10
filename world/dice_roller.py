@@ -130,7 +130,7 @@ def return_a_roll(number, dist_shape='normal', *ability_skill_or_powers):
         this_roll = np.random.default_rng().normal(loc=number, scale=scale)
         total_roll += this_roll/num_of_crits
         # check for rolls that are not critical successes
-        if this_roll <= number * 1.2:
+        if this_roll <= number * 1.2: # TODO: tune this to fire less often
             # check to make sure the roll is at least 1
             if total_roll < 1:
                 # less than 1 is definitely a critical failure

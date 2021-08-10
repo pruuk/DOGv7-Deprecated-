@@ -231,7 +231,7 @@ class Character(DefaultCharacter):
         """
         # checks to ensure temp vars we need have been set. If not, run calcs
         log_file(f"start of foot/groundwork calc func for {self.name}", \
-                 filename='combat.log')
+                 filename='combat_step.log')
         # calc groundwork ratio
         groundwork_dice = (self.talents.grappling.actual + \
                            self.traits.mass.actual) * \
@@ -259,26 +259,26 @@ class Character(DefaultCharacter):
         this round of combat.
         """
         log_file(f"start of num of combat actions function for {self.name}.", \
-                 filename='combat.log')
+                 filename='combat_step.log')
         # listing out modifiers for readbility
         actions_roll = ((self.ability_scores.Dex.actual + \
                          self.ability_scores.Vit.actual) * \
                          self.ndb.enc_mod)
         log_file(f"{self.name} rolling {actions_roll} for actions. This \
-                 will be divided by 100 and then rounded.", filename='combat.log')
+                 will be divided by 100 and then rounded.", filename='combat_step.log')
         self.ndb.num_of_actions = round((roll(actions_roll, 'very flat', \
                                        self.ability_scores.Dex, \
                                        self.ability_scores.Vit)) / 100)
         log_file(f"{self.name} gets {self.ndb.num_of_actions} actions.", \
                  filename='combat.log')
-                 
+
 
     def check_wimpyield(self):
         """
         Check if character has fallen below their wimpy or yield thresholds. If
         they have, change next combat action to the appropriate action.
         """
-        log_file(f"start of wimpy/yield check for {self.name}.", filename='combat.log')
+        log_file(f"start of wimpy/yield check for {self.name}.", filename='combat_step.log')
         if self.traits.hp.current <= self.db.info['Wimpy']:
             self.execute_cmd('flee')
             log_file(f"{self.name} is fleeing (hps).", filename='combat.log')
@@ -309,7 +309,8 @@ class Character(DefaultCharacter):
         to the world rules function for handling combat hit attempts
         It will default to "hit", the standard attack.
         """
-        log_file(f"at_attack_tick firing for {self.name}.", filename='combat.log')
+        # TODO: Remove this once we're sure it is no longer needed
+        log_file(f"at_attack_tick firing for {self.name}.", filename='combat_step.log')
         if self.db.info['In Combat'] == True and self.db.info['Target'] is not None:
             log_file(f"{self.name} Calling combat \
                      validity rules, which will create a script to take combat \

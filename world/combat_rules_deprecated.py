@@ -16,6 +16,9 @@ By default, PCs and NPCs will have Mercy toggled on. This will mean that unless
 they do a massive hit, they will stop attempting to hit the other wounded
 combatant, stopping combat (unless the wounded combatant continues to be
 aggressive, of course).
+
+Please also see the combat_handler file found in the typeclasses folder for more
+info about how combat is orchastrated.
 """
 # imports
 import random

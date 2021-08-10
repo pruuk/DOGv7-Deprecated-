@@ -16,6 +16,7 @@ from evennia.utils.logger import log_file
 from world.combat_rules import actions_dict
 from world.dice_roller import return_a_roll as roll
 from evennia import create_script
+from evennia import utils
 
 # # actions
 # actions_dict = {
@@ -63,9 +64,6 @@ class CombatActionObject(DefaultScript):
         self.start_delay = False
         self.persistent = False
 
-        self.db.num_of_actions = 1
-
-
 
     def _cleanup_character(self, character):
         """
@@ -80,7 +78,7 @@ class CombatActionObject(DefaultScript):
         This is called on first start but also when the script is restarted
         after a server reboot.
         """
-        pass
+        self.execute_purpose()
 
     def at_stop(self):
         "Called just before the script is stopped/destroyed."
@@ -102,11 +100,15 @@ class CombatActionObject(DefaultScript):
         "Add combatant to handler"
         self.db.character = self.obj
         log_file(f"Adding {self.obj.name} to {self.db.character} for {self.key}.", \
-                 filename='combat.log')
+                 filename='combat_step.log')
         # add backrefs on character
         # character.db.combat_actioners.append(self)
         # log_file(f"Added backref for {self.name} to {character.name}.", \
         #          filename='combat.log')
+
+    def execute_purpose(self):
+        "Executes the combat action"
+        pass
 
 
 
@@ -114,26 +116,15 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
     """
     Combat action script that carries out normal unarmed combat strikes.
     """
-    def at_script_creation(self):
-        "Called when script is first created"
-        super().at_script_creation()
-
-    def at_start(self):
-        """
-        This is called on first start but also when the script is restarted
-        after a server reboot.
-        """
-        self.execute_purpose()
-
     def execute_purpose(self):
         "Executes the combat action"
-        log_file(f"{self.key} start of action execution.", filename='combat.log')
+        log_file(f"{self.key} start of action execution.", filename='combat_step.log')
         character = self.obj
         # loop through attacks
         for i in range(character.ndb.num_of_actions):
             # TODO: MOve this to combat rules once we get it working
             log_file(f"Executing unarmed strike normal number: {i+1} for {character.name}", \
-                     filename='combat.log')
+                     filename='combat_step.log')
             attack_hit = round(roll((character.talents.unarmed_striking.actual * \
                               character.ndb.footwork_mod), 'flat', \
                               character.ability_scores.Dex, character.talents.unarmed_striking))
@@ -142,7 +133,8 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
             character.traits.sp.current -= (12 / character.ndb.enc_mod)
             # get defender rolls
             defender = character.db.info['Target']
-            log_file(f"doing defensive rolls for {defender.name}.", filename='combat.log')
+            log_file(f"doing defensive rolls for {defender.name}.", \
+                     filename='combat_step.log')
             dodge_roll = round(roll((defender.ability_scores.Dex.actual * \
                                defender.ndb.footwork_mod) * .95, 'flat', \
                                defender.ability_scores.Dex))
@@ -169,11 +161,53 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
                     # TODO: Implement death - for now we'll just flee
                     defender.execute_cmd('flee')
         log_file(f"Unarmed Strikes normal complete for {character.name}.", \
-                 filename='combat.log')
+                 filename='combat_step.log')
         log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
-                 filename='combat.log')
+                 filename='combat_step.log')
         self.delete()
 
+
+class CAOYield(CombatActionObject):
+    """
+    Combat action script that carries out the action of yielding.
+    """
+    def execute_purpose(self):
+        "Executes the combat action"
+        log_file(f"{self.key} start of action execution.", filename='combat_step.log')
+        character = self.obj
+        # check if the defender is the merciful type
+        defender = character.db.info['Target']
+        if defender.db.info['Mercy'] == True:
+            character.location.msg_contents(f"{character.name} yields to {defender.name}, who is merciful.")
+            log_file(f"{character.name} is yielding. killing combat handler: {character.ndb.combat_handler}", \
+                     filename='combat_step.log')
+            character.ndb.combat_handler.delete()
+        else:
+            character.location.msg_contents(f"{character.name} tries to yield to {defender.name}, but they have no mercy.")
+        log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
+                 filename='combat_step.log')
+        self.delete()
+
+
+class CAOFlee(CombatActionObject):
+    """
+    Combat action script that carries out the action of yielding.
+    """
+    def execute_purpose(self):
+        "Executes the combat action"
+        log_file(f"{self.key} start of action execution.", filename='combat_step.log')
+        character = self.obj
+        exits = []
+        for exit in character.location.exits:
+            exits.append(exit)
+        character.cmdset.delete("commands.combat_commands.CombatCmdSet")
+        utils.delay(1,character.execute_cmd(f"{random.choice(exits)}"))
+        log_file(f"{character.name} is fleeing. killing combat handler: {character.ndb.combat_handler}", \
+                     filename='combat_step.log')
+        character.ndb.combat_handler.delete()
+        log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
+                 filename='combat_step.log')
+        self.delete()
 
 
 # spawner func to instantiate the correct action type
@@ -184,9 +218,13 @@ def spawn_combat_action_object(character, action_curated):
     combat_rules file in order to prevent the index getting out of sync.
     """
     log_file(f"Start of spawn_combat_action_object func for {character.name}", \
-             filename='combat.log')
+             filename='combat_step.log')
     if action_curated == 'unarmed_strike_normal':
         cao = create_script("typeclasses.combat_actions.CAOUnarmedStrikesNormal", obj=character)
+    elif action_curated == 'yield':
+        cao = create_script("typeclasses.combat_actions.CAOYield", obj=character)
+    elif action_curated == 'flee':
+        cao = create_script("typeclasses.combat_actions.CAOFlee", obj=character)
     else:
         log_file(f"Error in spawn_combat_action_object func. \
                  character: {character.name} action: {action_curated}. ", \
