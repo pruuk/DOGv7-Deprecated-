@@ -8,7 +8,6 @@ from evennia import CmdSet
 from evennia import default_cmds
 from evennia import create_script
 from evennia import utils
-from evennia import TICKER_HANDLER as tickerhandler
 import random
 from evennia import search_object
 from evennia.utils.logger import log_file

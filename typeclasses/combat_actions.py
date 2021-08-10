@@ -93,7 +93,7 @@ class CombatActionObject(DefaultScript):
         # within 15 seconds
         log_file(f"Combat action Script {self.key} deleting self", \
                  filename='combat.log')
-        self.delete()
+        self.stop()
 
     # combat handler methods
     def add_character(self):
@@ -164,7 +164,7 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
                  filename='combat_step.log')
         log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
                  filename='combat_step.log')
-        self.delete()
+        self.stop()
 
 
 class CAOYield(CombatActionObject):
@@ -181,12 +181,12 @@ class CAOYield(CombatActionObject):
             character.location.msg_contents(f"{character.name} yields to {defender.name}, who is merciful.")
             log_file(f"{character.name} is yielding. killing combat handler: {character.ndb.combat_handler}", \
                      filename='combat_step.log')
-            character.ndb.combat_handler.delete()
+            character.ndb.combat_handler.stop()
         else:
             character.location.msg_contents(f"{character.name} tries to yield to {defender.name}, but they have no mercy.")
         log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
                  filename='combat_step.log')
-        self.delete()
+        self.stop()
 
 
 class CAOFlee(CombatActionObject):
@@ -204,10 +204,10 @@ class CAOFlee(CombatActionObject):
         utils.delay(1,character.execute_cmd(f"{random.choice(exits)}"))
         log_file(f"{character.name} is fleeing. killing combat handler: {character.ndb.combat_handler}", \
                      filename='combat_step.log')
-        character.ndb.combat_handler.delete()
+        character.ndb.combat_handler.stop()
         log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
                  filename='combat_step.log')
-        self.delete()
+        self.stop()
 
 
 # spawner func to instantiate the correct action type

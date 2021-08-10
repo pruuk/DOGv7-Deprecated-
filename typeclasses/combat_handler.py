@@ -59,19 +59,27 @@ class CombatHandler(DefaultScript):
         Remove character from handler and clean
         it of the back-reference and cmdset
         """
+        log_file(f"Starting cleanup for {character.name}.", \
+                 filename='combat_step.log')
         dbref = character.id
         del self.db.characters[dbref]
         del self.db.turn_actions[dbref]
         del self.db.action_count[dbref]
         del self.db.char_temp_vars[dbref]
         del character.ndb.combat_handler
+        del character.ndb.hp_mod
+        del character.ndb.sp_mod
+        del character.ndb.cp_mod
+        del character.ndb.enc_mod
+        del character.ndb.groundwork_mod
+        del character.ndb.footwork_mod
+        del character.ndb.range
+        del character.ndb.position_mod
+        del character.ndb.num_of_actions
         character.cmdset.delete("commands.combat_commands.CombatCmdSet")
         character.db.info['In Combat'] = False
-        if len(self.db.characters) < 2:
-            # less than 2 chars in combat, ending combat
-            log_file("less than 2 characters in combat. killing handler", \
-                      filename='combat_step.log')
-            self.delete()
+        log_file(f"Cleanup for {character.name} is complete.", \
+                 filename='combat_step.log')
 
     def at_start(self):
         """
@@ -84,6 +92,7 @@ class CombatHandler(DefaultScript):
 
     def at_stop(self):
         "Called just before the script is stopped/destroyed."
+        log_file("start of char cleanup func", filename='combat_step.log')
         for character in list(self.db.characters.values()):
             # note: the list() call above disconnects list from database
             self._cleanup_character(character)
@@ -108,7 +117,7 @@ class CombatHandler(DefaultScript):
             log_file(f"START OF ROUND FOR {character.name}", \
                      filename='combat_step.log')
             self._refresh_combat_temp_vars(character)
-            log_file(f"calling refresh_combat_validity func for {character.name}", \
+            log_file(f"calling combat_validity func for {character.name}", \
                      filename='combat_step.log')
             combat_valid = self._combat_validity_check(character)
             log_file(f"combat validity check done. Result: {combat_valid}", \
@@ -127,7 +136,6 @@ class CombatHandler(DefaultScript):
                      filename='combat_step.log')
             spawn_combat_action_object(character, action_curated)
             log_file(f"END OF AT_REPEAT FOR {character.name}.", filename='combat_step.log')
-        del self
 
 
     # combat handler methods
@@ -152,6 +160,11 @@ class CombatHandler(DefaultScript):
             self._cleanup_character(character)
         if not self.db.characters:
             # if no more characters in battle, kill this handler
+            self.stop()
+        elif len(self.db.characters) < 2:
+            # less than 2 chars in combat, ending combat
+            log_file("less than 2 characters in combat. killing handler", \
+                      filename='combat_step.log')
             self.stop()
 
     def msg_all(self, message):
@@ -244,6 +257,8 @@ class CombatHandler(DefaultScript):
         return True if script can move on to spawning combat action script for
         this round.
         """
+        log_file(f"Start of combat_validity func for {character.name}", \
+                 filename='combat_step.log')
         if character.db.info['Target'] == None:
             log_file(f"Combat invalid. {character.name}'s target is None.", \
                      filename='combat_step.log')
@@ -261,7 +276,7 @@ class CombatHandler(DefaultScript):
                      filename='combat_step.log')
             return False
         elif character.location != character.db.info['Target'].location:
-            log_file(f"Combat invalid. {character.name} is not in same location as {character.db.info['Target'].name}.", \
+            log_file(f"Combat invalid. {character.name} is not in same location as their target.", \
                      filename='combat_step.log')
             return False
         else:
