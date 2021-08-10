@@ -16,6 +16,7 @@ from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
 from evennia.utils.logger import log_file
 from evennia import gametime
+from evennia import create_script
 
 
 class Character(DefaultCharacter):
@@ -139,6 +140,7 @@ class Character(DefaultCharacter):
         # TODO: Add in character sheet
         # TODO: Add in function for character sheet refresh
         # TODO: Add in progression script
+        self.db.moving_spotlight_heartbeat = create_script("typeclasses.moving_spotlight.MovingSpotlightTickCharacter", obj=self)
 
     def calculate_encumberance(self):
         """
@@ -250,7 +252,6 @@ class Character(DefaultCharacter):
         self.ndb.footwork_mod = (roll(footwork_dice, 'flat', \
                                 self.ability_scores.Dex, \
                                 self.talents.footwork)) / 100
-        return
 
 
     def populate_num_combat_actions(self):
@@ -299,34 +300,38 @@ class Character(DefaultCharacter):
             log_file(f"{self.name} is yielding (cps).", filename='combat.log')
         else:
             log_file(f"{self.name} is not fleeing or yielding.", filename='combat.log')
-        return
 
 
-    def at_attack_tick(self):
+    def at_heartbeat_tick_regen_me(self):
         """
-        This function is called by the ticker created when combat
-        was initiated. It will send the last attack command given
-        to the world rules function for handling combat hit attempts
-        It will default to "hit", the standard attack.
+        This function will be fired off at the heartbeat tick of the global
+        MovingSpotlightTick script. It will determine randomly how much health,
+        stamina, and conviction to regen at that tick. Being in combat will
+        reduce regen. Other factors that influence regen are ability scores,
+        mutations, and the phases of the three moons.
         """
-        # TODO: Remove this once we're sure it is no longer needed
-        log_file(f"at_attack_tick firing for {self.name}.", filename='combat_step.log')
-        if self.db.info['In Combat'] == True and self.db.info['Target'] is not None:
-            log_file(f"{self.name} Calling combat \
-                     validity rules, which will create a script to take combat \
-                     actions if combat is valid. ", filename='combat.log')
-            refresh_combat_temp_vars(self, self.db.info['Target'])
-            # setting target to None for debugging purposes
-            self.db.info['In Combat'] = False
-            self.db.info['Target'] = None
-            log_file("setting in combat to false and target to none so that the \
-                     next tick kills the ticker.", filename='combat.log')
-        elif self.db.info['In Combat'] == False or self.db.info['Target'] is None:
-            att_ticker_id = str("attack_tick_%s" % (self.name))
-            log_file(f"Trying to kill ticker: {att_ticker_id}.", filename='combat.log')
-            tickerhandler.remove(interval=5, callback='at_attack_tick', idstring=def_ticker_id, persistent=False)
-            log_file("Attack ticker killed.", filename='combat.log')
-            #TODO: Write a cleanup func for all the temp vars
+        log_file(f"start of regen tick function for {self.name}.", \
+                 filename='time_tick.log')
+        # first, check if we're in combat
+        if self.db.info['In Combat']:
+            combat_mod = .25
         else:
-            log_file("Weird if/else error in at_attack_func on character", \
-                     filename='error.log')
+            combat_mod = 1
+        # TODO: implement moon phase modifier when we have that
+        # TODO: Add a multiplier for wounds once we implment those
+        # define regen dice and roll for amount to regen
+        hp_regen_dice = self.ability_scores.Vit.actual * combat_mod
+        sp_regen_dice = self.ability_scores.Vit.actual * combat_mod
+        cp_regen_dice = self.ability_scores.Cha.actual * combat_mod
+        hp_regen_roll = round(roll(hp_regen_dice, 'normal', \
+                        self.ability_scores.Vit, self.traits.hp))
+        sp_regen_roll = round(roll(sp_regen_dice, 'normal', \
+                        self.ability_scores.Vit, self.traits.sp))
+        cp_regen_roll = round(roll(cp_regen_dice, 'normal', \
+                        self.ability_scores.Cha, self.traits.cp))
+        log_file(f"{self.name} regen tick - HP: {hp_regen_roll} SP: {sp_regen_roll} CP: {cp_regen_roll}", \
+                 filename='time_tick.log')
+        self.traits.hp.current += hp_regen_roll
+        self.traits.sp.current += sp_regen_roll
+        self.traits.cp.current += cp_regen_roll
+        self.execute_cmd("rprom")
