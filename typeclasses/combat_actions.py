@@ -17,6 +17,9 @@ from world.combat_rules import actions_dict
 from world.dice_roller import return_a_roll as roll
 from evennia import create_script
 from evennia import utils
+from world.combat_messaging import build_msgs_for_unarmed_strikes_normal as msg_unarmed_normal
+from world.combat_messaging import build_msgs_for_successful_dodge as msg_dodge
+from world.combat_messaging import build_msgs_for_successful_block as msg_block
 
 # # actions
 # actions_dict = {
@@ -147,16 +150,17 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
             # use up some stamina to defend
             defender.traits.sp.current -= (5 / defender.ndb.enc_mod)
             if dodge_roll > attack_hit:
-                character.location.msg_contents(f"{defender.name} dodges the attack of {character.name}.")
+                msg_dodge(character, defender)
             elif block_roll > attack_hit:
-                character.location.msg_contents(f"{defender.name} blocks the attack of {character.name}.")
+                msg_block(character, defender)
             else:
                 damage = roll(character.ability_scores.Str.actual / 2, 'very flat', character.ability_scores.Str)
-                character.location.msg_contents(f"{character.name} hits {defender.name} for {damage} damage.")
                 defender.traits.hp.current -= damage
                 log_file(f"{character.name} hit {defender.name} for {damage} damage. \
                          They have {defender.traits.hp.actual} hps left.", \
                          filename='combat.log')
+                log_file("calling combat msging for unarmed attacks", filename='combat_step.log')
+                msg_unarmed_normal(character, defender, damage)
                 if defender.traits.hp.actual < 1:
                     # TODO: Implement death - for now we'll just flee
                     defender.execute_cmd('flee')
@@ -165,6 +169,7 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
         log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
                  filename='combat_step.log')
         self.stop()
+
 
 
 class CAOYield(CombatActionObject):

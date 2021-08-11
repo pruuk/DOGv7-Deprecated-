@@ -320,8 +320,8 @@ class Character(DefaultCharacter):
         # TODO: implement moon phase modifier when we have that
         # TODO: Add a multiplier for wounds once we implment those
         # define regen dice and roll for amount to regen
-        hp_regen_dice = self.ability_scores.Vit.actual * combat_mod
-        sp_regen_dice = self.ability_scores.Vit.actual * combat_mod
+        hp_regen_dice = self.ability_scores.Vit.actual * combat_mod * 2
+        sp_regen_dice = self.ability_scores.Vit.actual * combat_mod * 2
         cp_regen_dice = self.ability_scores.Cha.actual * combat_mod
         hp_regen_roll = round(roll(hp_regen_dice, 'normal', \
                         self.ability_scores.Vit, self.traits.hp))
