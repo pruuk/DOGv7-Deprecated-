@@ -12,6 +12,8 @@ from world.traits import TraitHandler
 from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
 from typeclasses.characters import Character
+from evennia import utils
+import random
 
 
 class NPC(Character):
@@ -116,17 +118,15 @@ class NPC(Character):
         Execute a greeting if an NPC or character enters,
         after a short delay.
         """
-        utils.delay(1, self.greetings)
-        self.char = character
+        utils.delay(2, self.greetings(character))
 
 
-    def greetings(self):
+    def greetings(self, character):
         """
         Greets someone when they enter the room after a
         short delay.
         """
         # TODO: Expand this into friendly, neutral, and unfriendly greetings
-        character = self.char
         dict_of_greetings = [
         f'say Greetings, {character}',
         f'say Good day, {character}',
@@ -134,7 +134,7 @@ class NPC(Character):
         f'emote waves hello to {character}.',
         f"say I'm glad to see you, {character}."
         ]
-        if self.name != self.char.name:
+        if self.name != character.name:
             self.execute_cmd(random.choice(dict_of_greetings))
         else:
             pass

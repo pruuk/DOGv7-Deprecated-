@@ -133,7 +133,7 @@ class Character(DefaultCharacter):
         }
         # Add in info db to store other useful tidbits we'll need
         self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strike', \
-                        'In Combat': False, 'Position': 'standing', \
+                        'In Combat': False, 'Position': 'standing', 'Sneaking' : False, \
                         'Wimpy': 100, 'Yield': 200, 'Title': None}
         # money
         self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}
@@ -317,12 +317,24 @@ class Character(DefaultCharacter):
             combat_mod = .25
         else:
             combat_mod = 1
+        # next, check position
+        pos_mod = 1
+        if self.db.info['Position'] == "resting":
+            pos_mod = 1.1
+        elif self.db.info['Position'] == "sitting":
+            pos_mod = 1.1
+        elif self.db.info['Position'] == "supine":
+            pos_mod = 1.2
+        elif self.db.info['Position'] == "prone":
+            pos_mod = 1.2
+        elif self.db.info['Position'] == "sleeping":
+            pos_mod = 1.5
         # TODO: implement moon phase modifier when we have that
         # TODO: Add a multiplier for wounds once we implment those
         # define regen dice and roll for amount to regen
-        hp_regen_dice = self.ability_scores.Vit.actual * combat_mod * 2
-        sp_regen_dice = self.ability_scores.Vit.actual * combat_mod * 2
-        cp_regen_dice = self.ability_scores.Cha.actual * combat_mod
+        hp_regen_dice = self.ability_scores.Vit.actual * combat_mod * pos_mod * 2
+        sp_regen_dice = self.ability_scores.Vit.actual * combat_mod * pos_mod * 2
+        cp_regen_dice = self.ability_scores.Cha.actual * combat_mod * pos_mod
         hp_regen_roll = round(roll(hp_regen_dice, 'normal', \
                         self.ability_scores.Vit, self.traits.hp))
         sp_regen_roll = round(roll(sp_regen_dice, 'normal', \
@@ -335,3 +347,13 @@ class Character(DefaultCharacter):
         self.traits.sp.current += sp_regen_roll
         self.traits.cp.current += cp_regen_roll
         self.execute_cmd("rprom")
+
+
+    def exhaustion_check(self):
+        """
+        Checks if the character is out of stamina. If they are, the character
+        falls over into a resting position.
+        """
+        if self.traits.sp.current < 1:
+            self.caller.msg("You collapse to the floor from exhaustion.")
+            self.caller.db.info['Position'] = 'prone'

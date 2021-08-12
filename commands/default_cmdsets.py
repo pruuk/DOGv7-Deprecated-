@@ -16,7 +16,8 @@ own cmdsets by inheriting from them or directly from `evennia.CmdSet`.
 
 from evennia import default_cmds
 from commands import equip_commands
-from commands import command, combat_commands, equip_commands, builder_commands
+from commands import command, combat_commands, equip_commands, builder_commands, \
+                     position_commands, talent_commands
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -41,6 +42,9 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(command.CmdPrompt())
         self.add(combat_commands.CombatRelatedCmdSet())
         self.add(builder_commands.BuilderCmdSet())
+        self.add(position_commands.NonStandingPositionCmdSet())
+        self.add(position_commands.CmdStand())
+        self.add(talent_commands.TalentCmdSet())
 
 
 
