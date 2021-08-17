@@ -67,7 +67,10 @@ def combat_action_picker(character, action):
     log_file(f"{character.name} action: {action}", filename='combat_step.log')
     # grappling is the most complicated case. Moved it to its own funcion
     if action == 'grapple':
+        log_file("calling resolve grappling action func to determine specific grappling action", \
+                 filename='combat_step.log')
         grappling_action = resolve_grappling_action(character, action)
+        log_file(f"grappling action type: {grappling_action}", filename='combat_step.log')
         if grappling_action == 'takedown':
             return actions_dict[5]
         elif grappling_action == 'improve_position':
@@ -81,39 +84,40 @@ def combat_action_picker(character, action):
         elif grappling_action == 'melee_weapon_strike':
             return actions_dict[9]
         else:
-            log_file(f"Weird output for grasppling_action: {grappling_action}. \
+            log_file(f"Weird output for grappling_action: {grappling_action}. \
                      Check code in world.combat_rules.", filename='error.log')
     # check first for flee actions, elminate cases where we're in bad grappling
     # position and not grappling
-    if character.ndb.range == 'grapple':
+    elif character.ndb.range == 'grapple':
         if character.db.info['Position'] in ['side controlled', 'mounted', \
                                              'prmounted','standingbt']:
             # we're grappled and in a really bad position and we con't want to
             # be there. try to escape (regardless of preferred action)
-            return actions_dict[11]
-        if action in ['bash', 'ranged_weapon_strike', 'mental_attack', \
-                      'defend']:
-            # move away from opponent
-            return actions_dict[26]
+            if action == 'flee':
+                return actions_dict[23]
+            elif action == 'yield':
+                return actions_dict[22]
+            else:
+                return actions_dict[11]
         elif character.db.info['Position'] == 'standing':
             # we're standing. most of the time, we'll want to move back to a
             # more advantageous range
             if action == 'unarmed_strike':
                 # strike some of the time, but move away most of the time
                 if character.mutations.sharp_claws > 0:
-                    actions_list = [actions_dict[26], actions_dict[8]]
-                    return str(random.choices(actions_list, weights(50, 50), k=1))
+                    curated_action = random.choices([actions_dict[26], actions_dict[8]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
                 else:
-                    actions_list = [actions_dict[26], actions_dict[7]]
-                    return str(random.choices(actions_list, weights(50, 50), k=1))
+                    curated_action = random.choices([actions_dict[26], actions_dict[7]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
             elif action == 'melee_weapon_strike':
                 # strike some of the time, but move away most of the time
-                actions_list = [actions_dict[26], actions_dict[9]]
-                return str(random.choices(actions_list, weights(50, 50), k=1))
+                curated_action = random.choices([actions_dict[26], actions_dict[9]], weights = (50, 50), k=1)
+                return str(curated_action[0])
             elif action == 'taunt':
-                # strike some of the time, but move away most of the time
-                actions_list = [actions_dict[26], actions_dict[17]]
-                return str(random.choices(actions_list, weights(50, 50), k=1))
+                # taunt some of the time, but move away most of the time
+                curated_action = random.choices([actions_dict[26], actions_dict[17]], weights = (50, 50), k=1)
+                return str(curated_action[0])
             elif action == 'flee':
                 return actions_dict[23]
             elif action == 'yield':
@@ -131,19 +135,49 @@ def combat_action_picker(character, action):
             if action == 'unarmed_strike':
                 # strike some of the time, but move away most of the time
                 if character.mutations.sharp_claws > 0:
-                    actions_list = [actions_dict[26], actions_dict[8]]
-                    return str(random.choices(actions_list, weights(25, 75), k=1))
+                    curated_action = random.choices([actions_dict[11], actions_dict[8]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
                 else:
-                    actions_list = [actions_dict[26], actions_dict[7]]
-                    return str(random.choices(actions_list, weights(25, 75), k=1))
+                    curated_action = random.choices([actions_dict[11], actions_dict[7]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
             elif action == 'melee_weapon_strike':
                 # strike some of the time, but move away most of the time
-                actions_list = [actions_dict[26], actions_dict[9]]
-                return str(random.choices(actions_list, weights(25, 75), k=1))
+                curated_action = random.choices([actions_dict[11], actions_dict[9]], weights = (50, 50), k=1)
+                return str(curated_action[0])
             elif action == 'taunt':
+                # taunt some of the time, but move away most of the time
+                curated_action = random.choices([actions_dict[11], actions_dict[17]], weights = (50, 50), k=1)
+                return str(curated_action[0])
+            elif action == 'flee':
+                return actions_dict[23]
+            elif action == 'yield':
+                return actions_dict[22]
+            elif action == 'disengage':
+                return actions_dict[24]
+            else:
+                log_file(f"unknown decision tree for {character.name} while in \
+                         range: {character.ndb.range} and \
+                         position: {character.db.info['Position']}. \
+                         Desired action: {action}", \
+                         filename='error.log')
+        else:
+            # in clinched, top, in guard, etc
+            if action == 'unarmed_strike':
                 # strike some of the time, but move away most of the time
-                actions_list = [actions_dict[26], actions_dict[17]]
-                return str(random.choices(actions_list, weights(25, 75), k=1))
+                if character.mutations.sharp_claws > 0:
+                    curated_action = random.choices([actions_dict[11], actions_dict[8]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
+                else:
+                    curated_action = random.choices([actions_dict[11], actions_dict[7]], weights = (50, 50), k=1)
+                    return str(curated_action[0])
+            elif action == 'melee_weapon_strike':
+                # strike some of the time, but move away most of the time
+                curated_action = random.choices([actions_dict[11], actions_dict[9]], weights = (50, 50), k=1)
+                return str(curated_action[0])
+            elif action == 'taunt':
+                # taunt some of the time, but move away most of the time
+                curated_action = random.choices([actions_dict[11], actions_dict[17]], weights = (50, 50), k=1)
+                return str(curated_action[0])
             elif action == 'flee':
                 return actions_dict[23]
             elif action == 'yield':
@@ -229,9 +263,9 @@ def combat_action_picker(character, action):
                  position: {character.db.info['Position']}. \
                  Desired action: {action}",
                  filename='error.log')
+    log_file(f"Decision tree for curating action failed. Returning None for {character.name} - action: {action}.", \
+             filename='error.log')
     return None
-
-
 
 
 def resolve_grappling_action(character, action):
@@ -240,35 +274,45 @@ def resolve_grappling_action(character, action):
     Because mma is so fluid, the position the character and defender are currently
     in affects the liklihood of an character choosing certain actions.
     """
-    log_file("start of resolve grappling action func.", filename='combat.log')
+    log_file("start of resolve grappling action func.", filename='combat_step.log')
     possible_grappling_actions = ['takedown', 'improve_position', 'submission', \
                                   'unarmed_strike_normal', 'unarmed_strike_natural_weapons', \
                                   'melee_weapon_strike']
     # if character is standing, we want to improve position (move into a grappling position)
     if character.db.info['Position'] == 'standing':
-        grappling_action = 'takedown'
+        log_file(f"character in position standing. takedown is the action to do.", \
+                 filename='combat_step.log')
+        grappling_action = ['takedown']
     elif character.db.info['Position'] in ['side controlled', 'mounted', \
                                           'prmounted', 'standingbt']:
+        log_file(f"character in position side controlled, mounted, or worse. generating choices", \
+                 filename='combat_step.log')
         grappling_action = random.choices(possible_grappling_actions, \
                            weights=(0, 95, 5, 0, 0, 0), k=1)
     elif character.db.info['Position'] in ['top', 'in guard']:
-        if character.mutations.sharp_claws > 0:
+        log_file(f"character in position top or guard. generating choices", \
+                 filename='combat_step.log')
+        if character.mutations.sharp_claws.actual > 0:
             grappling_action = random.choices(possible_grappling_actions, \
-                           weights=(0, 30, 30, 0, 40, 0, 0), k=1)
+                           weights=(0, 30, 30, 0, 40, 0), k=1)
             # TODO: Add conditional for wielding a small melee weapon
         else:
             grappling_action = random.choices(possible_grappling_actions, \
-                           weights=(0, 30, 30, 40, 0, 0, 0), k=1)
+                           weights=(0, 30, 30, 40, 0, 0), k=1)
     elif character.db.info['Position'] in ['clinching', 'clinched']:
-        if character.mutations.sharp_claws > 0:
+        log_file(f"character in position clinching or clinched. generating choices", \
+                 filename='combat_step.log')
+        if character.mutations.sharp_claws.actual > 0:
             grappling_action = random.choices(possible_grappling_actions, \
-                           weights=(0, 40, 30, 0, 30, 0, 0), k=1)
+                           weights=(0, 40, 30, 0, 30, 0), k=1)
         # TODO: Add conditional for wielding a small melee weapon
         else:
             grappling_action = random.choices(possible_grappling_actions, \
-                           weights=(0, 40, 30, 30, 0, 0, 0), k=1)
+                           weights=(0, 40, 30, 30, 0, 0), k=1)
     elif character.db.info['Position'] in ['tbmount', 'tbstanding']:
-        if character.mutations.sharp_claws > 0:
+        log_file(f"character in position tbmount or tbstanding. generating choices", \
+                 filename='combat_step.log')
+        if character.mutations.sharp_claws.actual > 0:
             grappling_action = random.choices(possible_grappling_actions, \
                            weights=(0, 0, 70, 0, 30, 0), k=1)
             # TODO: Add conditional for wielding a small melee weapon
@@ -276,14 +320,16 @@ def resolve_grappling_action(character, action):
             grappling_action = random.choices(possible_grappling_actions, \
                            weights=(0, 0, 70, 30, 0, 0), k=1)
     else:
-        if character.mutations.sharp_claws > 0:
+        if character.mutations.sharp_claws.actual > 0:
+            log_file(f"character in position unknown. generating choices", \
+                     filename='combat_step.log')
             grappling_action = random.choices(possible_grappling_actions, \
                            weights=(0, 10, 25, 0, 65, 0), k=1)
             # TODO: Add conditional for wielding a small melee weapon
         else:
             grappling_action = random.choices(possible_grappling_actions, \
                            weights=(0, 10, 25, 65, 0, 0), k=1)
-    grappling_action = str(grappling_action)
+    grappling_action = str(grappling_action[0])
     log_file(f"{character.name} is doing grappling action: {grappling_action}", \
-             filename='combat.log')
+             filename='combat_step.log')
     return grappling_action

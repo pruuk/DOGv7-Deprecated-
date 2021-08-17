@@ -48,7 +48,7 @@ class CmdAttack(Command):
         # set up combat
         if target.ndb.combat_handler:
             # target is already in combat - join it
-            log_file(f"{target.name} already in combat. {self.name} joining \
+            log_file(f"{target.name} already in combat. {self.caller.name} joining \
                      combat using handler: {target.ndb.combat_handler}", \
                      filename='combat_step.log')
             target.ndb.combat_handler.add_character(self.caller)

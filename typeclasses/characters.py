@@ -152,6 +152,8 @@ class Character(DefaultCharacter):
         items in inventory. Certain containers and bags will also reduce
         encmberance.
         """
+        log_file(f"start of status encumberance calc func for {self.name}", \
+                 filename='combat_step.log')
         items = self.contents
         for item in items:
             if item.db.used_by == self:
@@ -172,6 +174,8 @@ class Character(DefaultCharacter):
         Rerun all the calculations for combat modifiers and store them as temp
         variables on the character.
         """
+        log_file(f"start of status modifiers calc func for {self.name}", \
+                 filename='combat_step.log')
         # modifiers for health/stamina/conviction
         self.ndb.hp_mod = ((self.traits.hp.current / self.traits.hp.max) ** .15)
         self.ndb.sp_mod = ((self.traits.sp.current / self.traits.sp.max) ** .15)
@@ -299,7 +303,7 @@ class Character(DefaultCharacter):
             self.execute_cmd('yield')
             log_file(f"{self.name} is yielding (cps).", filename='combat.log')
         else:
-            log_file(f"{self.name} is not fleeing or yielding.", filename='combat.log')
+            log_file(f"{self.name} is not fleeing or yielding.", filename='combat_step.log')
 
 
     def at_heartbeat_tick_regen_me(self):
@@ -357,3 +361,84 @@ class Character(DefaultCharacter):
         if self.traits.sp.current < 1:
             self.caller.msg("You collapse to the floor from exhaustion.")
             self.caller.db.info['Position'] = 'prone'
+
+
+    def reroll(self):
+        """
+        Rerolls stats and resets talents and mutations. This should only be
+        triggered by the dev command reroll and should only be attempted when
+        the character is not in combat.
+
+        NOTE: This is equivolent to doing the update command, but won't create a
+        duplicate set of scripts on the character.
+
+        """
+        self.ability_scores.clear()
+        self.traits.clear()
+        self.talents.clear()
+        self.mutations.clear()
+        # add in the ability scores
+        self.ability_scores.add(key='Dex', name='Dexterity', type='static', \
+                        base=rarsc(100), extra={'learn' : 0})
+        self.ability_scores.add(key='Str', name='Strength', type='static', \
+                        base=rarsc(100), extra={'learn' : 0})
+        self.ability_scores.add(key='Vit', name='Vitality', type='static', \
+                        base=rarsc(100), extra={'learn' : 0})
+        self.ability_scores.add(key='Per', name='Perception', type='static', \
+                        base=rarsc(100), extra={'learn' : 0})
+        self.ability_scores.add(key='Cha', name='Charisma', type='static', \
+                        base=rarsc(100), extra={'learn' : 0})
+        # add in traits for health, stamina, conviction, mass, encumberance
+        self.traits.add(key="hp", name="Health Points", type="gauge", \
+                        base=((self.ability_scores.Vit.current * 5) + \
+                        (self.ability_scores.Cha.current * 2)), extra={'learn' : 0})
+        self.traits.add(key="sp", name="Stamina Points", type="gauge", \
+                        base=((self.ability_scores.Vit.current * 3) + \
+                        (self.ability_scores.Str.current * 2)+ \
+                        (self.ability_scores.Dex.current)), extra={'learn' : 0})
+        self.traits.add(key="cp", name="Conviction Points", type="gauge", \
+                        base=((self.ability_scores.Cha.current * 5) + \
+                        (self.ability_scores.Vit.current)), extra={'learn' : 0})
+        self.traits.add(key="mass", name="Mass", type='static', \
+                        base=rarsc(180, dist_shape='very flat'), extra={'learn' : 0})
+        self.traits.add(key="enc", name="Encumberance", type='static', \
+                        base=0, max=(self.ability_scores.Str.current * .5), extra={'learn' : 0})
+        # apply the initial mutations and talents. Most mutations will be set
+        # to zero, as will many talents
+        talents.apply_talents(self)
+        mutations.initialize_mutations(self)
+        # set up intial equipment slots for the character. Since the character
+        # is new and has no mutations, there won't be slots like tail or extra
+        # arms
+        self.db.limbs = ( ('head', ('head', 'face', 'ears', 'neck')), \
+                          ('torso', ('chest', 'back', 'waist', 'quiver')), \
+                          ('arms', ('shoulders', 'arms', 'hands', 'ring')), \
+                          ('legs', ('legs', 'feet')), \
+                          ('weapon', ('wield1', 'wield2')) )
+        # define slots that go with the limbs.
+        # TODO: Write a function for changing slots if/when mutations cause
+        # new limbs to be grown or damage causes them to be lost
+        self.db.slots = {
+            'head': None,
+            'face': None,
+            'ears': None,
+            'neck': None,
+            'chest': None,
+            'back': None,
+            'waist': None,
+            'quiver': None,
+            'shoulders': None,
+            'arms': None,
+            'hands': None,
+            'ring': None,
+            'legs': None,
+            'feet': None,
+            'wield1': None,
+            'wield2': None
+        }
+        # Add in info db to store other useful tidbits we'll need
+        self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strike', \
+                        'In Combat': False, 'Position': 'standing', 'Sneaking' : False, \
+                        'Wimpy': 100, 'Yield': 200, 'Title': None}
+        # money
+        self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}

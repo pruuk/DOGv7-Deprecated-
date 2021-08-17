@@ -5,6 +5,7 @@ for the MUD.
 from evennia import Command
 from evennia import CmdSet
 from evennia import default_cmds, utils
+from evennia.utils.logger import log_file
 
 class CmdHeal(Command):
     """
@@ -108,6 +109,36 @@ class CmdSetBasePower(Command):
                 return
 
 
+class CmdReroll(Command):
+    """
+    Wipes and rerolls the ability scores, talents, mutations and other
+    attributes of a character. This is a dangerous command and should not
+    be used on a character or NPC that is in combat or taking actions of
+    any kind.
+
+    Usage:
+        reroll <character/NPC name>
+    """
+    key = "reroll"
+    locks = "cmd: perm(Builders)"
+    help_category = "Building"
+
+    def func(self):
+        "Reroll all ability scores"
+        if not self.args:
+            self.caller.execute_cmd("help reroll")
+            return
+        else:
+            target = self.caller.search(self.args)
+            if utils.inherits_from(target, 'typeclasses.npcs.NPC') or utils.inherits_from(target, 'typeclasses.characters.Character'):
+                target.reroll()
+                self.caller.msg(f"All ability scores and other attributes rerolled for {target.name}.")
+            else:
+                self.caller.msg("target is not a character or NPC.")
+                log_file(f"{self.caller} tried to use reroll command on {target.name} of type {type(target)}.", \
+                         filename='error.log')
+
+
 class BuilderCmdSet(CmdSet):
     """
     Adds the set of commands a player or NPC object that are related to combat,
@@ -120,3 +151,4 @@ class BuilderCmdSet(CmdSet):
     def at_cmdset_creation(self):
         self.add(CmdHeal())
         self.add(CmdSetBasePower())
+        self.add(CmdReroll())

@@ -282,7 +282,7 @@ class CmdPrompt(Command):
         sp = caller.traits.sp.percent_bar()
         cp = caller.traits.cp.percent_bar()
         position = self.caller.db.info['Position']
-        prompt= "Health:%s Stamina:%s Conviction:%s <%s>" % (hp,sp,cp, position)
+        prompt= "<%s> Health:%s Stamina:%s Conviction:%s" % (position,hp,sp,cp)
         if None in (hp, sp, cp):
                 # Attributes not defined
                 self.caller.msg("No attributes defined! Update character!")
@@ -296,8 +296,8 @@ class CmdPrompt(Command):
                 tar_position = self.caller.db.info['Target'].db.info['Position']
                 if self.caller.ndb.range:
                     range = self.caller.ndb.range
-                    prompt = "Health:%s Stamina:%s Conviction:%s <%s> Range: %s   |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,range,tar_name,tar_hp,tar_sp, tar_position)
+                    prompt = "<%s> Health:%s Stamina:%s Conviction:%s  Range: %s   |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (position,hp,sp,cp,range,tar_name,tar_hp,tar_sp, tar_position)
                 else:
-                    prompt = "Health:%s Stamina:%s Conviction:%s <%s>    |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (hp,sp,cp,position,tar_name,tar_hp,tar_sp, tar_position)
+                    prompt = "<%s> Health:%s Stamina:%s Conviction:%s     |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (position,hp,sp,cp,tar_name,tar_hp,tar_sp, tar_position)
         self.caller.db.promptchoice = 'standard'
         self.caller.msg(prompt=prompt)

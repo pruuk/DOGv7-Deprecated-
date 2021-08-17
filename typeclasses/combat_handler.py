@@ -15,9 +15,7 @@ class CombatHandler(DefaultScript):
     """
     This implements the combat handler.
     """
-
     # standard script hooks
-
     def at_script_creation(self):
         "Called when script is first created"
 
@@ -31,13 +29,14 @@ class CombatHandler(DefaultScript):
         self.db.characters = {}
         # store all actions for each turn
         self.db.turn_actions = {}
-        # number of actions entered per combatant
-        self.db.action_count = {}
         # store all temp vars for the characters
         # NOTE: to begin with, these will be stored on the character, but
         # later we will move these to the handler or to the mini-script
         # for carrying out each attack.
         self.db.char_temp_vars = {}
+        # keep track of round # so it is easier to debug
+        self.db.round_count = 1
+
 
     def _init_character(self, character):
         """
@@ -62,10 +61,6 @@ class CombatHandler(DefaultScript):
         log_file(f"Starting cleanup for {character.name}.", \
                  filename='combat_step.log')
         dbref = character.id
-        del self.db.characters[dbref]
-        del self.db.turn_actions[dbref]
-        del self.db.action_count[dbref]
-        del self.db.char_temp_vars[dbref]
         del character.ndb.combat_handler
         del character.ndb.hp_mod
         del character.ndb.sp_mod
@@ -78,8 +73,11 @@ class CombatHandler(DefaultScript):
         del character.ndb.num_of_actions
         character.cmdset.delete("commands.combat_commands.CombatCmdSet")
         character.db.info['In Combat'] = False
+        character.db.info['Position'] = 'standing'
+        character.execute_cmd("rprom")
         log_file(f"Cleanup for {character.name} is complete.", \
                  filename='combat_step.log')
+
 
     def at_start(self):
         """
@@ -90,12 +88,17 @@ class CombatHandler(DefaultScript):
         for character in self.db.characters.values():
             self._init_character(character)
 
+
     def at_stop(self):
         "Called just before the script is stopped/destroyed."
         log_file("start of char cleanup func", filename='combat_step.log')
         for character in list(self.db.characters.values()):
             # note: the list() call above disconnects list from database
             self._cleanup_character(character)
+        del self.db.characters[dbref]
+        del self.db.turn_actions[dbref]
+        del self.db.char_temp_vars[dbref]
+
 
     def at_repeat(self):
         """
@@ -114,8 +117,9 @@ class CombatHandler(DefaultScript):
             # update the char variables
             log_file("*********************************************************************", \
                      filename='combat.log')
-            log_file(f"START OF ROUND FOR {character.name}", \
+            log_file(f"START OF ROUND: {self.db.round_count} FOR {character.name}", \
                      filename='combat_step.log')
+            self.reconcile_range_and_position(character)
             self._refresh_combat_temp_vars(character)
             log_file(f"calling combat_validity func for {character.name}", \
                      filename='combat_step.log')
@@ -136,15 +140,14 @@ class CombatHandler(DefaultScript):
                      filename='combat_step.log')
             spawn_combat_action_object(character, action_curated)
             log_file(f"END OF AT_REPEAT FOR {character.name}.", filename='combat_step.log')
+        self.db.round_count += 1
 
 
     # combat handler methods
     def add_character(self, character):
-
         "Add combatant to handler"
         dbref = character.id
         self.db.characters[dbref] = character
-        self.db.action_count[dbref] = 0
         self.db.turn_actions[dbref] = [(character.db.info['Default Attack'])]
         self.db.char_temp_vars[dbref] = [] # to be populated later at tick
         log_file(f"Added {character.name} to {self.name}", \
@@ -153,6 +156,7 @@ class CombatHandler(DefaultScript):
         self._init_character(character)
         # set character to be in combat
         character.db.info['In Combat'] = True
+
 
     def remove_character(self, character):
         "Remove combatant from handler"
@@ -167,10 +171,12 @@ class CombatHandler(DefaultScript):
                       filename='combat_step.log')
             self.stop()
 
+
     def msg_all(self, message):
         "Send message to all combatants"
         for character in self.db.characters.values():
             character.msg(message)
+
 
     def add_action(self, action, character):
         """
@@ -187,17 +193,11 @@ class CombatHandler(DefaultScript):
         log_file(f"{self.key} - Start of add_action method for {character.name}.",
                  filename='combat_step.log')
         dbref = character.id
-        count = self.db.action_count[dbref]
-        if 0 <= count <= 1: # only allow 2 actions
-            self.db.turn_actions[dbref][count] = (action)
-            log_file(f"Added action: {action} for {character.name}", \
-                     filename='combat_step.log')
-        else:
-            # report if we already used too many actions
-            log_file(f"action queue full for {character.name}", filename='error.log')
-            return False
-        self.db.action_count[dbref] += 1
-        return True
+        self.db.turn_actions[dbref].insert(0, action)
+        log_file(f"Added action: {action} for {character.name}", \
+                 filename='combat_step.log')
+        return
+
 
     def remove_action(self, character):
         """
@@ -206,33 +206,43 @@ class CombatHandler(DefaultScript):
         """
         log_file("start of remove action func", filename='combat_step.log')
         dbref = character.id
+        if len(self.db.turn_actions[dbref]) > 0:
+            log_file(f"Action at top of queue: {self.db.turn_actions[dbref][0]}", \
+                 filename='combat_step.log')
+        else:
+            log_file(f"No Actions in queue: {self.db.turn_actions[dbref]}", \
+                 filename='combat_step.log')
+            return character.db.info['Default Attack']
         if self.db.turn_actions[dbref][0] == character.db.info['Default Attack']:
             return character.db.info['Default Attack']
         elif self.db.turn_actions[dbref][0] in ['flee', 'yield', 'disengage']:
             # for flee type actions, we won't pop it off. keep trying until we succeed
             return self.db.turn_actions[dbref][0]
         else:
-            return self.db.turn_actions[dbref].pop(0)
+            popped_action = self.db.turn_actions[dbref].pop(0)
+            log_file(f"Returning action: {popped_action}", filename='combat_step.log')
+            return popped_action
+
 
     def _refresh_combat_temp_vars(self, character):
         """
         Refreshes the temp variables related to combat and/or applies variables on
         a character for the first time.
         """
-        log_file(f"Refreshing temp variables for: {character.name}", \
+        log_file(f"Round: {self.db.round_count} Refreshing temp variables for: {character.name}", \
                  filename='combat_step.log')
         # check if the action needs to be changed to a flee action
-        log_file("checking if attacker wants to flee or yield", filename='combat_step.log')
+        log_file(f"Round: {self.db.round_count} checking if attacker wants to flee or yield", filename='combat_step.log')
         character.check_wimpyield() # TODO: update wimpyyield to justs end the action to queue
         # refresh the attacker's prompt
         character.execute_cmd('rprom')
         # refresh attacker and defender temp combat calcs
-        log_file("refreshing combat calcs", filename='combat_step.log')
+        log_file(f"Round: {self.db.round_count} refreshing combat calcs", filename='combat_step.log')
         character.calculate_encumberance()
         character.calc_status_modifiers()
         character.calc_footwork_and_groundwork_mods()
         # set range if it hasn't been set
-        log_file(f"checking if range is set for {character.name}", filename='combat_step.log')
+        log_file(f"Round: {self.db.round_count} checking if range is set for {character.name}", filename='combat_step.log')
         if character.ndb.range in ['out_of_range', 'ranged', 'melee', 'grapple']:
             log_file(f"Range was set for {character.name} to {character.ndb.range}", \
                      filename='combat_step.log')
@@ -241,7 +251,7 @@ class CombatHandler(DefaultScript):
         # get num of attacks
         character.populate_num_combat_actions()
         # character.db.info['Target'].calc_footwork_and_groundwork_mods()
-        log_file(f"{character.name} \n\tEnc: {character.ndb.enc_mod} \
+        log_file(f"Round: {self.db.round_count} {character.name} \n\tEnc: {character.ndb.enc_mod} \
                  \n\thp_mod: {character.ndb.hp_mod} \tsp_mod: {character.ndb.sp_mod} \
                  \n\tcp_mod: {character.ndb.cp_mod} \tpos_mod: {character.ndb.pos_mod} \
                  \n\tfootwork: {character.ndb.footwork_mod} \tgroundwork: {character.ndb.groundwork_mod} \
@@ -257,7 +267,7 @@ class CombatHandler(DefaultScript):
         return True if script can move on to spawning combat action script for
         this round.
         """
-        log_file(f"Start of combat_validity func for {character.name}", \
+        log_file(f"Round: {self.db.round_count} Start of combat_validity func for {character.name}", \
                  filename='combat_step.log')
         if character.db.info['Target'] == None:
             log_file(f"Combat invalid. {character.name}'s target is None.", \
@@ -282,11 +292,124 @@ class CombatHandler(DefaultScript):
         else:
             return True
 
-    def create_combat_action_script(attacker):
+
+    def reconcile_range_and_position(self, character):
         """
-        Creates a new combat action script to carry out the combat actions for a
-        single combat round. If an attacker is able to do multiple actions, such as
-        multiple unarmed strikes, it will resolve all of them and output it as a
-        single block.
+        Check to see if the range and positions of the character make sense.
+        If we put ourselves in a position and range that don't make sense
+        together, end combat and send an error log.
         """
-        pass
+        range_and_position_dict = {
+            'standing': {
+                'grapple': True,
+                'melee': True,
+                'ranged': True,
+                'out_of_range': True,
+            },
+            'tbmount' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'mount' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'side control' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'top' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'in guard' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'side controlled' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'mounted' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'prmounted' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'tbstanding': {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'clinching' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'clinched': {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'standingbt' : {
+                'grapple': True,
+                'melee': False,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'sitting' : {
+                'grapple': True,
+                'melee': True,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'supine': {
+                'grapple': True,
+                'melee': True,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'prone' : {
+                'grapple': True,
+                'melee': True,
+                'ranged': False,
+                'out_of_range': False,
+            },
+            'sleeping': {
+                'grapple': True,
+                'melee': True,
+                'ranged': False,
+                'out_of_range': False,
+            },
+        }
+        if range_and_position_dict[character.db.info['Position']][character.ndb.range] == True:
+            log_file(f"reconcile check for range and positition for {character.name} passed.", \
+                     filename='combat_step.log')
+            return
+        else:
+            log_file(f"reconcile check for range and positition for {character.name} failed. See error log", \
+                     filename='combat_step.log')
+            log_file(f"Round: {self.db.round_count} Range: {character.ndb.range} and Position: {character.db.info['Position']} for {character.name} do not match up. Killing {self.key}.", \
+                     filename='error.log')
+            self.stop()
