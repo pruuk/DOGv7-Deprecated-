@@ -40,6 +40,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(equip_commands.EquipCmdSet())
         self.add(command.CmdReport())
         self.add(command.CmdPrompt())
+        self.add(command.CmdDisplayCharacterSheet())
         self.add(combat_commands.CombatRelatedCmdSet())
         self.add(builder_commands.BuilderCmdSet())
         self.add(position_commands.NonStandingPositionCmdSet())

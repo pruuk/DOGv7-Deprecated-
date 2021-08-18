@@ -18,6 +18,7 @@ from world.progression_rules import control_progression_funcs
 from evennia.utils.logger import log_file
 from evennia import gametime
 from evennia import create_script
+from evennia.utils import evform, evtable
 
 
 class Character(DefaultCharacter):
@@ -141,6 +142,10 @@ class Character(DefaultCharacter):
         # TODO: Add in character sheet
         # TODO: Add in function for character sheet refresh
         self.db.moving_spotlight_heartbeat = create_script("typeclasses.moving_spotlight.MovingSpotlightTickCharacter", obj=self)
+        # we will use this to stop account from changing sheet
+        self.db.sheet_locked = False
+        self.db.charsheet = evform.EvForm("world/charsheetform.py")
+        self.update_character_sheet()
 
 
     def calculate_encumberance(self):
@@ -455,3 +460,138 @@ class Character(DefaultCharacter):
                         'Wimpy': 100, 'Yield': 200, 'Title': None}
         # money
         self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}
+        self.update_character_sheet()
+
+
+    def describe_health(self):
+        """
+        Returns a textual description of the remaining health of this object.
+        Used for look command.
+        """
+        if self.traits.hp.current * 100.0 / self.traits.hp.max >= 95:
+            return "|Gunhurt.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 90:
+            return "|Ga few scratches.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 85:
+            return "|Gscratched up.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 80:
+            return "|gbleeding lightly.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max>= 70:
+            return "|glightly wounded.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 60:
+            return "|gmoderately wounded.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 50:
+            return "|ytaken a bit of a thrashing.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 40:
+            return "|ypretty beat up.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 25:
+            return "|rbleeding heavily|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 15:
+            return "|rnearly dead|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max < 5:
+            return "|Rdeath's door.|n"
+
+
+    def describe_fatigue(self):
+        """
+        Returns a textual description of the remaining stamina of this object.
+        Used for look command.
+        """
+        if self.traits.hp.current * 100.0 / self.traits.hp.max >= 95:
+            return "|Grested.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 90:
+            return "|Ga single drop of sweat on their brow.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 85:
+            return "|Gstill looking fresh.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 80:
+            return "|gsweating lightly.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max>= 70:
+            return "|gaudibly breathing.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 60:
+            return "|gmoderately weezing.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 50:
+            return "|ysweat pouring off of them.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 40:
+            return "|ypretty tired.|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 25:
+            return "|rlooking tired|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max >= 15:
+            return "|rnearly exhausted|n"
+        elif self.traits.hp.current * 100.0 / self.traits.hp.max < 5:
+            return "|Rcompletely spent.|n"
+
+
+    def update_character_sheet(self):
+        """
+        This function is called to update the character sheet when the command
+        to display the character sheet is run.
+        """
+        if self.db.info['Title'] is not None:
+            if len(self.db.info['Title']) < 25:
+                name_and_title = str(self.name) + self.db.info['Title']
+        else:
+            name_and_title = str(self.name)
+        funds = f"Gold: {self.db.wallet['GC']} Silver: {self.db.wallet['SC']} Copper: {self.db.wallet['CC']}"
+        # NOTE: money stored in self.db.wallet
+        att_table = evtable.EvTable("Attribute", "Value",
+                        table = [
+                            ["Health", "Stamina", "Conviction", "Dexterity", \
+                             "Strength", "Vitality", "Perception", "Charisma"],
+                            [(str(int(self.traits.hp.current)) + " / " + str(self.traits.hp.max) ), \
+                             (str(int(self.traits.sp.current)) + " / " + str(self.traits.sp.max) ), \
+                             (str(int(self.traits.cp.current)) + " / " + str(self.traits.cp.max ) ), \
+                             self.ability_scores.Dex.current, self.ability_scores.Str.current, \
+                             self.ability_scores.Vit.current, self.ability_scores.Per.current, \
+                             self.ability_scores.Cha.current]],
+                             align='c', border="incols")
+        # get top talents in a simplified dictionary converted to a list of
+        # names and a list of scores
+        talent_names, talent_scores = self.get_top_talents()
+        talent_table = evtable.EvTable("Talent", "Value",
+                        table = [
+                            talent_names,
+                            talent_scores],
+                            align='c', border="incols")
+        info_table = evtable.EvTable("Info", "Value",
+                        table = [
+                                ["Default Attack", "Mercy", "Wimpy", "Yield", \
+                                 "Sneaking"], \
+                                [self.db.info["Default Attack"], self.db.info["Mercy"], \
+                                 self.db.info["Wimpy"], self.db.info["Yield"], \
+                                 self.db.info["Sneaking"]]],
+                                 align='c', border="incols")
+        # get the top mutations in a simplified dictionary converted to a list of
+        # names and a list of scores
+        mut_names, mut_scores = self.get_top_mutations()
+        mutations_table = evtable.EvTable("Talent", "Value",
+                        table = [
+                            mut_names,
+                            mut_scores],
+                            align='c', border="incols")
+        self.db.charsheet.map(tables={2: att_table, 3: talent_table, \
+                                      4: info_table, 5: mutations_table},
+                              cells= {1: name_and_title, 6: funds})
+
+
+    def get_top_talents(self):
+        """
+        Loops through all of the character's talents and returns the top 10
+        talents in their list by current score.
+        """
+        top_talents_list = list(self.talents.all_dict.items())[:12]
+        top_talents_dict = {v['name']: (v['base'] + v['mod']) for k, v in top_talents_list}
+        talent_names = list(top_talents_dict.keys())
+        talent_scores = list(top_talents_dict.values())
+        return talent_names, talent_scores
+
+
+    def get_top_mutations(self):
+        """
+        Loops through all of the character's mutations and returns the top 5
+        mutations in their list by current score.
+        """
+        top_mutations_list = list(self.mutations.all_dict.items())[:5]
+        top_mutations_dict = {v['name']: (v['base'] + v['mod']) for k, v in top_mutations_list}
+        mut_names = list(top_mutations_dict.keys())
+        mut_scores = list(top_mutations_dict.values())
+        return mut_names, mut_scores

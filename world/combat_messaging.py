@@ -114,6 +114,8 @@ def send_msg_to_objects(pcs_and_npcs_in_room, actor_msg_string, actee_msg_string
     log_file("start of send msg to all objs func", filename='combat_step.log')
     log_file(f"Roles - Actor: {pcs_and_npcs_in_room['Actor']} Actee: {pcs_and_npcs_in_room['Actee']} Observers: {pcs_and_npcs_in_room['Observers']}", \
              filename='combat_step.log')
+    log_file(f"msg strings: {actor_msg_string} {actee_msg_string} {observer_msg_string}", \
+             filename='combat_step.log')
     for role, character in pcs_and_npcs_in_room.items():
         if role == 'Actor':
             send_msg_to_actor(character, actor_msg_string)

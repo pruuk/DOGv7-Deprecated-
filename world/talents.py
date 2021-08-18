@@ -452,14 +452,38 @@ def apply_talents(character):
     """
     character.talents.clear()
     for talent, data in _TALENT_DATA.items():
-        character.talents.add(
-            key=talent,
-            type='static',
-            base=character.ability_scores[data['base']].actual,
-            mod=0,
-            name=data['name'],
-            extra={'learn' : 0}
-        )
+        if data['starting_score'] != 0:
+            if data['starting_score'] in ('Dex', 'Str', 'Vit', 'Per', 'Cha'):
+                character.talents.add(
+                    key=talent,
+                    type='static',
+                    base=character.ability_scores[data['base']].actual,
+                    mod=0,
+                    name=data['name'],
+                    extra={'learn' : 0}
+                )
+            elif data['starting_score'] == {'rarsc': 100}:
+                character.talents.add(
+                    key=talent,
+                    type='static',
+                    base=rarsc(100),
+                    mod=0,
+                    name=data['name'],
+                    extra={'learn' : 0}
+                )
+            else:
+                logger.log_trace("Initialization of one of the talents failed")
+        elif data['starting_score'] == 0:
+            character.talents.add(
+                key=talent,
+                type='static',
+                base=0,
+                mod=0,
+                name=data['name'],
+                extra={'learn' : 0}
+            )
+        else:
+            logger.log_trace("Initialization of one of the talents failed")
 
 
 def load_talent(talent):

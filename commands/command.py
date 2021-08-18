@@ -301,3 +301,31 @@ class CmdPrompt(Command):
                     prompt = "<%s> Health:%s Stamina:%s Conviction:%s     |r>>>|n |h%s|n |r>>>|n   Health: %s Stamina: %s <%s>" % (position,hp,sp,cp,tar_name,tar_hp,tar_sp, tar_position)
         self.caller.db.promptchoice = 'standard'
         self.caller.msg(prompt=prompt)
+
+
+class CmdDisplayCharacterSheet(Command):
+    """
+    This function displays a lot of information about the character in a big
+    table, showing status and progress in the game.
+
+    Usage:
+        charsheet
+
+    Aliases:
+        csheet
+        score
+        sc
+        att
+
+    """
+    key = "charsheet"
+    aliases = ["csheet", "score", "sc", "att"]
+    locks = "cmd:all()"
+    help_category = "General"
+
+    def func(self):
+        "display character sheet table"
+        # update the sheet values
+        self.caller.update_character_sheet()
+        # display the sheet
+        self.caller.msg(self.caller.db.charsheet)

@@ -34,8 +34,8 @@ def check_ability_score_progression(character):
                       character.ability_scores.Vit, character.ability_scores.Per, \
                       character.ability_scores.Cha]
     for ability_score in ability_scores:
-        log_file(f"Checking progression for {character.name} - {ability_score.name}", \
-                 filename='progression.log')
+        # log_file(f"Checking progression for {character.name} - {ability_score.name}", \
+        #          filename='progression.log')
         if ability_score.learn >= ability_score.actual:
             # we have a chance to learn something
             # set the threshold for gaining points and make it harder as the
@@ -65,8 +65,8 @@ def check_trait_progression(character):
     progressable_traits = [character.traits.hp, character.traits.sp, \
                            character.traits.cp,]
     for trait in progressable_traits:
-        log_file(f"Checking progression for {character.name} - {trait.name}", \
-                 filename='progression.log')
+        # log_file(f"Checking progression for {character.name} - {trait.name}", \
+        #          filename='progression.log')
         if trait.learn >= trait.actual:
             # we have a chance to learn something
             # set the threshold for gaining points and make it harder as the
@@ -89,6 +89,11 @@ def check_talent_progression(character):
     appropriate check to determine if it is progressed, then reset the learn
     counter on that mutation.
     """
+    # log_file(f"test of talent dict: {character.mutations.all_dict}", \
+    #          filename='trait_dict_test.log')
+    # TODO: Simplify the code below to just reference talent.all_dict instead
+    #       of storing a list of talents here seperately that may diverge
+    #       from the actual talent list
     ALL_TALENTS = (
         character.talents.footwork, character.talents.melee_weapons, \
         character.talents.ranged_weapons, character.talents.unarmed_striking, \
@@ -108,9 +113,9 @@ def check_talent_progression(character):
         character.talents.mental_domination
     )
     for talent in ALL_TALENTS:
-        log_file(f"Checking progression for {character.name} - {talent.name}", \
-                 filename='progression.log')
-        if talent.learn >= talent.actual:
+        # log_file(f"Checking progression for {character.name} - {talent.name}", \
+        #          filename='progression.log')
+        if talent.learn >= talent.actual and talent.actual != 0:
             # we have a chance to learn something
             # set the threshold for gaining points and make it harder as the
             # score gets higher

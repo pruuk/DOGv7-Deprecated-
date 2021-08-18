@@ -320,6 +320,11 @@ class TraitHandler(object):
         """Return a list of all trait keys in this TraitHandler."""
         return list(self.attr_dict.keys())
 
+    @property
+    def all_dict(self):
+        """Return a dict of all traits in this TraitHandler."""
+        return {k: v for k, v in sorted(self.attr_dict.items(), key=lambda item: (item[1]['base'] + item[1]['mod']), reverse=True)}
+
 
 @total_ordering
 class Trait(object):
