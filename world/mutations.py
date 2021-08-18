@@ -408,9 +408,9 @@ _MUTATION_DATA = {
         'extra': {'learn' : 0, 'min': 0, 'max': 1000}
     },
     'malleable_flesh': {
-        'name': 'Chromatic Flesh',
+        'name': 'Malleable Flesh',
         'base': 'Cha',
-        'desc': ("|mChromatic Flesh|n is a mutation that gives the character "
+        'desc': ("|mMalleable Flesh|n is a mutation that gives the character "
                  "the ability to alter the shape and texture of their own"
                  "flesh with the force of their will. This mutation unlocks"
                  "certain talents such as disguise and aids natural camo."),
@@ -499,7 +499,29 @@ def load_mutation(mutation):
     else:
         raise MutationException('Invalid mutation name.')
 
-# TODO: Add a function for discoving new mutations
+
+def get_ability_score_base_for_mutation(mutation):
+    """
+    Retrieves the ability score that is the base for that mutation. Used by
+    the progression functions to only progress the mutations related to an
+    ability score that has recently been 'learned'.
+    """
+    for item in DEX_MUTATIONS:
+        if item.name == mutation.name:
+            return 'Dexterity'
+    for item in STR_MUTATIONS:
+        if item.name == mutation.name:
+            return 'Strength'
+    for item in VIT_MUTATIONS:
+        if item.name == mutation.name:
+            return 'Vitality'
+    for item in PER_MUTATIONS:
+        if item.name == mutation.name:
+            return 'Perception'
+    for item in CHA_MUTATIONS:
+        if item.name == mutation.name:
+            return 'Charisma'
+
 
 class Mutation(object):
     """Represents a mutation's display attributes for use in help files.

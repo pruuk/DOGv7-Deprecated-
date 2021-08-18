@@ -95,9 +95,15 @@ class CmdTrack(Command):
             #          filename='tracks.log')
             if track_roll > difficulty_to_track and num_of_tracks > 0:
                 if trackee != self.caller:
-                    self.caller.msg(f"You found some tracks of {trackee} heading to {destination} that are about {round(track_age)} days old.")
+                    if track_age > 1:
+                        self.caller.msg(f"You found some tracks of {trackee} heading to {destination} that are about {round(track_age)} days old.")
+                    elif track_age <= 1:
+                        self.caller.msg(f"You found fresh signs of {trackee} heading to {destination}.")
                 else:
-                    self.caller.msg(f"You find a track you left heading to {destination} that is about {round(track_age)} days old.")
+                    if track_age > 1:
+                        self.caller.msg(f"You find a track you left heading to {destination} that is about {round(track_age)} days old.")
+                    elif track_age <= 1:
+                        self.caller.msg(f"You find fresh tracks you left heading to {destination}.")
                 num_of_tracks -= 1
                 success = True
         if success == False:

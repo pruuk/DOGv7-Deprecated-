@@ -14,6 +14,7 @@ from world.traits import TraitHandler
 from world.dice_roller import return_a_roll as roll
 from world.dice_roller import return_a_roll_sans_crits as rarsc
 from world import talents, mutations
+from world.progression_rules import control_progression_funcs
 from evennia.utils.logger import log_file
 from evennia import gametime
 from evennia import create_script
@@ -139,8 +140,8 @@ class Character(DefaultCharacter):
         self.db.wallet = {'GC': 0, 'SC': 0, 'CC': 0}
         # TODO: Add in character sheet
         # TODO: Add in function for character sheet refresh
-        # TODO: Add in progression script
         self.db.moving_spotlight_heartbeat = create_script("typeclasses.moving_spotlight.MovingSpotlightTickCharacter", obj=self)
+
 
     def calculate_encumberance(self):
         """
@@ -351,6 +352,18 @@ class Character(DefaultCharacter):
         self.traits.sp.current += sp_regen_roll
         self.traits.cp.current += cp_regen_roll
         self.execute_cmd("rprom")
+
+
+    def at_heartbeat_tick_do_progression_checks(self):
+        """
+        This function calls the progression checks to see if the character
+        learns anything on this heartbeat tick. We will prevent learning
+        while in combat.
+        """
+        if self.db.info['In Combat']:
+            return
+        else:
+            control_progression_funcs(self)
 
 
     def exhaustion_check(self):

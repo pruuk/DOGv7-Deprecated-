@@ -47,5 +47,7 @@ class MovingSpotlightTickCharacter(MovingSpotlightTick):
     """
     def at_repeat(self):
         "called every self.interval seconds."
+        # call regen func
         self.obj.at_heartbeat_tick_regen_me()
-        # TODO: Implement character progression
+        # call progression func
+        self.obj.at_heartbeat_tick_do_progression_checks()
