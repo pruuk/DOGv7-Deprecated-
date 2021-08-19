@@ -6,6 +6,7 @@ These functions will be called by functions in the combat_messaging file.
 """
 import random
 from evennia.utils.logger import log_file
+from evennia import utils as utils
 
 # general purpose lists and dictionaries
 damage_hit_locations = [
@@ -1226,3 +1227,33 @@ def return_grappling_escape_text(pcs_and_npcs_in_room, success):
     final_text_dict['Observer'] = grappling_escape_dict[success]['Observer'][index]
     log_file(f"text_dict: {final_text_dict}", filename='combat_step.log')
     return final_text_dict
+
+
+def return_melee_weapon_strike_text(pcs_and_npcs_in_room, damage):
+    """
+    This function returns a text string describing an attempt to strike
+    an opponent with a melee weapon.
+    """
+    log_file("Start of return melee weapons strike text func", \
+             filename='combat_step.log')
+    attacker = pcs_and_npcs_in_room['Actor']
+    defender = pcs_and_npcs_in_room['Actee']
+    hit_loc = return_hit_location()
+    damage_text = return_damage_gradient_text(damage/defender.traits.hp.current * 100)
+    weapons = []
+    log_file("determining weapon and its text", filename='combat_step.log')
+    if attacker.db.slots['main hand'] != None and utils.inherits_from(attacker.db.slots['main hand'], 'typeclasses.weapons.Weapon'):
+        weapons.append(attacker.db.slots['main hand'])
+    if attacker.db.slots['off hand'] != None and attacker.db.slots['main hand'] != attacker.db.slots['off hand'] \
+     and utils.inherits_from(attacker.db.slots['off hand'], 'typeclasses.weapons.Weapon'):
+        weapons.append(attacker.db.slots['off hand'])
+    weapon = random.choice(weapons) # in case we're dual wielding
+    log_file(f"Weapon doing damage: {weapon.name}", filename='combat_step.log')
+    weapon_text_dict = weapon.db.combat_descriptions
+    index = random.randrange(len(weapon_text_dict['hit']['self']))
+    final_text_dict = {}
+    final_text_dict['Actor'] = weapon_text_dict['hit']['self'][index].replace("{weapon}", str(weapon.name))
+    final_text_dict['Actee'] = weapon_text_dict['hit']['others'][index].replace("{weapon}", str(weapon.name))
+    final_text_dict['Observer'] = weapon_text_dict['hit']['others'][index].replace("{weapon}", str(weapon.name))
+    log_file(f"text_dict: {final_text_dict}", filename='combat_step.log')
+    return final_text_dict, hit_loc, damage_text

@@ -25,6 +25,9 @@ from world.combat_messaging import build_msgs_for_grappling_improve_position as 
 from world.combat_messaging import build_msgs_for_grappling_unarmed_strikes_normal as msg_grappling_unarmed_normal
 from world.combat_messaging import build_msgs_for_grappling_submission as msg_grappling_sub
 from world.combat_messaging import build_msgs_for_grappling_escape as msg_grappling_escape
+from world.combat_messaging import build_msgs_for_melee_weapon_strikes as msg_melee_weapons
+from world.combat_rules import apply_damage as apply_dam
+from world.combat_rules import check_shield_block_multiplier as check_sbm
 
 # # actions
 # actions_dict = {
@@ -158,6 +161,7 @@ class CAOUnarmedStrikesNormal(CombatActionObject):
             elif block_roll > attack_hit:
                 msg_block(character, defender)
             else:
+                # TODO: Move this to apply damage function!
                 damage = roll(character.ability_scores.Str.actual / 2, 'very flat', character.ability_scores.Str)
                 defender.traits.hp.current -= damage
                 log_file(f"{character.name} hit {defender.name} for {damage} damage. \
@@ -445,6 +449,7 @@ class CAOGrapplingUnarmedStrikesNormal(CombatActionObject):
             elif block_roll > attack_hit:
                 msg_block(character, defender)
             else:
+                # TODO: Move this to apply damage function!
                 damage = roll(character.ability_scores.Str.actual / 2, 'very flat', character.ability_scores.Str)
                 defender.traits.hp.current -= damage
                 log_file(f"{character.name} hit {defender.name} for {damage} damage. \
@@ -484,6 +489,7 @@ class CAOGrapplingSubmission(CombatActionObject):
         log_file(f"Grappling submission. Attack Roll: {grappling_attack_roll} Block Roll: {grappling_block_roll}", \
                  filename='combat.log')
         if grappling_attack_roll > grappling_block_roll:
+            # TODO: Move this to apply damage function!
             damage = roll(character.ability_scores.Str.actual / 2, 'very flat', character.ability_scores.Str)
             # note that submission damage is primarily to stamina. Attacker
             # will 'submit' the defender if they deplete their stamina
@@ -573,6 +579,120 @@ class CAOGrapplingEscape(CombatActionObject):
         self.stop()
 
 
+class CAOGrapplingMeleeWeaponStrike(CombatActionObject):
+    """
+    Carries out a strike with a small melee weapon while grappling.
+    """
+    def execute_purpose(self):
+        "Executes the combat action"
+        log_file(f"{self.key} start of grappling melee weapon strike action execution.", \
+                 filename='combat_step.log')
+        character = self.obj
+        defender = character.db.info['Target']
+        shield_block_multiplier = check_sbm(defender)
+        # loop through attacks
+        for i in range(character.ndb.num_of_actions):
+            log_file(f"Executing grappling melee weapon strike number: {i+1} for {character.name}", \
+                     filename='combat_step.log')
+            attack_hit = round(roll((character.talents.melee_weapons.actual * \
+                              character.ndb.groundwork_mod), 'flat', \
+                              character.ability_scores.Dex, character.talents.melee_weapons))
+            log_file(f"{character.name} attack roll: {attack_hit}", filename='combat.log')
+            # use up stamina to attack
+            character.traits.sp.current -= (12 / character.ndb.enc_mod)
+            # get defender rolls
+            defender = character.db.info['Target']
+            log_file(f"doing defensive rolls for {defender.name}.", \
+                     filename='combat_step.log')
+            dodge_roll = round(roll((defender.ability_scores.Dex.actual * \
+                               defender.ndb.groundwork_mod) * .9, 'flat', \
+                               defender.ability_scores.Dex))
+            block_roll = round(roll((defender.ability_scores.Str.actual * \
+                               defender.ndb.groundwork_mod) * .9 * \
+                               shield_block_multiplier, 'flat', \
+                               defender.ability_scores.Str))
+            log_file(f"{defender.name} Dodge: {dodge_roll}\tBlock: {block_roll}", \
+                     filename='combat.log')
+            # use up some stamina to defend
+            defender.traits.sp.current -= (5 / defender.ndb.enc_mod)
+            if dodge_roll > attack_hit:
+                msg_dodge(character, defender)
+            elif block_roll > attack_hit:
+                msg_block(character, defender)
+            else:
+                if attack_hit > dodge_roll + block_roll:
+                    critical_hit = True
+                else:
+                    critical_hit = False
+                # call damage func here
+                damage = apply_dam(character, defender, attack_type, critical_hit)
+                log_file("calling combat msging for melee weapon attacks", filename='combat_step.log')
+                msg_melee_weapons(character, defender, damage)
+        log_file(f"Grappling melee weapon strikes complete for {character.name}.", \
+                 filename='combat_step.log')
+        log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
+                 filename='combat_step.log')
+        self.stop()
+
+
+class CAOMeleeWeaponStrike(CombatActionObject):
+    """
+    Carries out a strike with a melee weapon while in proper range.
+    """
+    def execute_purpose(self):
+        "Executes the combat action"
+        log_file(f"{self.key} start of melee weapon strike action execution.", \
+                 filename='combat_step.log')
+        character = self.obj
+        defender = character.db.info['Target']
+        shield_block_multiplier = check_sbm(defender)
+        # loop through attacks
+        for i in range(character.ndb.num_of_actions):
+            log_file(f"Executing melee weapon strike number: {i+1} for {character.name}", \
+                     filename='combat_step.log')
+            attack_hit = round(roll((character.talents.melee_weapons.actual * \
+                              character.ndb.footwork_mod), 'flat', \
+                              character.ability_scores.Dex, character.talents.melee_weapons))
+            log_file(f"{character.name} attack roll: {attack_hit}", filename='combat.log')
+            # use up stamina to attack
+            character.traits.sp.current -= (12 / character.ndb.enc_mod)
+            # get defender rolls
+            defender = character.db.info['Target']
+            log_file(f"doing defensive rolls for {defender.name}.", \
+                     filename='combat_step.log')
+            dodge_roll = round(roll((defender.ability_scores.Dex.actual * \
+                               defender.ndb.footwork_mod) * .9, 'flat', \
+                               defender.ability_scores.Dex))
+            block_roll = round(roll((defender.ability_scores.Str.actual * \
+                               defender.ndb.footwork_mod) * .9 * \
+                               shield_block_multiplier, 'flat', \
+                               defender.ability_scores.Str))
+            log_file(f"{defender.name} Dodge: {dodge_roll}\tBlock: {block_roll}", \
+                     filename='combat.log')
+            # use up some stamina to defend
+            defender.traits.sp.current -= (5 / defender.ndb.enc_mod)
+            if dodge_roll > attack_hit:
+                msg_dodge(character, defender)
+            elif block_roll > attack_hit:
+                msg_block(character, defender)
+            else:
+                if attack_hit > dodge_roll + block_roll:
+                    critical_hit = True
+                else:
+                    critical_hit = False
+                # call damage func here
+                attack_type = 'melee_weapons'
+                log_file("calling apply damage for melee weapon strike", filename='combat_step.log')
+                damage = apply_dam(character, defender, attack_type, critical_hit)
+                log_file("calling combat msging for melee weapon attacks", filename='combat_step.log')
+                msg_melee_weapons(character, defender, damage)
+        log_file(f"Grappling melee weapon strikes complete for {character.name}.", \
+                 filename='combat_step.log')
+        log_file(f"end of attacks - Combat action Script {self.key} deleting self", \
+                 filename='combat_step.log')
+        self.stop()
+
+
 # spawner func to instantiate the correct action type
 def spawn_combat_action_object(character, action_curated):
     """
@@ -598,6 +718,10 @@ def spawn_combat_action_object(character, action_curated):
         cao = create_script("typeclasses.combat_actions.CAOGrapplingSubmission", obj=character)
     elif action_curated == 'grapple_escape':
         cao = create_script("typeclasses.combat_actions.CAOGrapplingEscape", obj=character)
+    elif action_curated == 'grapple_melee_weapon_strike':
+        cao = create_script("typeclasses.combat_actions.CAOGrapplingMeleeWeaponStrike", obj=character)
+    elif action_curated == 'melee_weapon_strike':
+        cao = create_script("typeclasses.combat_actions.CAOMeleeWeaponStrike", obj=character)
     else:
         log_file(f"Error in spawn_combat_action_object func. \
                  character: {character.name} action: {action_curated}. ", \

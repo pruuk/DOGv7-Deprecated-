@@ -51,6 +51,7 @@ class CombatHandler(DefaultScript):
         character.calculate_encumberance()
         character.calc_status_modifiers()
         character.calc_footwork_and_groundwork_mods()
+        character.calculate_equipment_bonuses()
 
 
     def _cleanup_character(self, character):
@@ -71,6 +72,9 @@ class CombatHandler(DefaultScript):
         del character.ndb.range
         del character.ndb.position_mod
         del character.ndb.num_of_actions
+        del self.ndb.eq_damage_bonus
+        del self.ndb.eq_phy_arm
+        del self.ndb.eq_men_arm
         character.cmdset.delete("commands.combat_commands.CombatCmdSet")
         character.db.info['In Combat'] = False
         character.db.info['Position'] = 'standing'
@@ -241,6 +245,7 @@ class CombatHandler(DefaultScript):
         character.calculate_encumberance()
         character.calc_status_modifiers()
         character.calc_footwork_and_groundwork_mods()
+        character.calculate_equipment_bonuses()
         # set range if it hasn't been set
         log_file(f"Round: {self.db.round_count} checking if range is set for {character.name}", filename='combat_step.log')
         if character.ndb.range in ['out_of_range', 'ranged', 'melee', 'grapple']:
@@ -255,6 +260,8 @@ class CombatHandler(DefaultScript):
                  \n\thp_mod: {character.ndb.hp_mod} \tsp_mod: {character.ndb.sp_mod} \
                  \n\tcp_mod: {character.ndb.cp_mod} \tpos_mod: {character.ndb.pos_mod} \
                  \n\tfootwork: {character.ndb.footwork_mod} \tgroundwork: {character.ndb.groundwork_mod} \
+                 \n\teq_damage: {character.ndb.eq_damage} \tphy arm: {character.ndb.eq_phy_arm} \
+                 \n\tpsi armor: {character.ndb.eq_men_arm} \
                  \n\tNum_of_actions: {character.ndb.num_of_actions}", \
                  filename='combat.log')
 

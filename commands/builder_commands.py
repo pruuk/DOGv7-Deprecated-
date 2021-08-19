@@ -6,6 +6,7 @@ from evennia import Command
 from evennia import CmdSet
 from evennia import default_cmds, utils
 from evennia.utils.logger import log_file
+import random
 
 class CmdHeal(Command):
     """
@@ -139,6 +140,34 @@ class CmdReroll(Command):
                          filename='error.log')
 
 
+class CmdShowColors(Command):
+    """
+    Sends a text colo palate for every possible numbered color palate to the
+    caller, so they can see what colors are mapped to what.
+
+    usage:
+        rainbow
+
+    """
+    key = "rainbow"
+    locks = "cmd: perm(Builders)"
+    help_category = "Building"
+
+    def func(self):
+        """
+        Give me that sweet unicorn puke!
+        """
+        colors = f" Text Colors by number: "
+        for first_digit in range(6):
+            for second_digit in range(6):
+                for third_digit in range(6):
+                    colors += f"|{first_digit}{second_digit}{third_digit}{first_digit}{second_digit}{third_digit}|n "
+        self.caller.msg(f"{colors}")
+
+
+
+
+
 class BuilderCmdSet(CmdSet):
     """
     Adds the set of commands a player or NPC object that are related to combat,
@@ -152,3 +181,4 @@ class BuilderCmdSet(CmdSet):
         self.add(CmdHeal())
         self.add(CmdSetBasePower())
         self.add(CmdReroll())
+        self.add(CmdShowColors())

@@ -55,12 +55,12 @@ class CmdInventory(MuxCommand):
                 data[0].append("|C{}|n".format(item.name))
                 data[1].append(fill(item.db.desc or "", 50))
                 stat = " "
-                if item.attributes.has('damage'):
-                    stat += "(|rDamage: {:>2d}|n) ".format(item.db.damage)
-                if item.attributes.has('toughness'):
-                    stat += "(|yToughness: {:>2d}|n)".format(item.db.toughness)
-                if item.attributes.has('range'):
-                    stat += "(|G{}|n) ".format(item.db.range.capitalize())
+                if item.attributes.has('mass'):
+                    stat += "(|rWeight: {:}|n) ".format(item.db.mass)
+                if item.attributes.has('values'):
+                    stat += "(|yValue: {:}|n)".format(item.db.value)
+                if item.attributes.has('hp'):
+                    stat += "(|yDurability: {:}|n) ".format(item.db.hp)
                 data[2].append(stat.strip())
             table = EvTable(header=False, table=data, border=None, valign='t')
             string = "|YYou are carrying:|n\n{}".format(table)
@@ -170,12 +170,20 @@ class CmdEquip(MuxCommand):
                 if not item or not item.access(caller, 'view'):
                     continue
                 stat = " "
-                if item.attributes.has('damage'):
-                    stat += "(|rDamage: {:>2d}|n) ".format(item.db.damage)
-                if item.attributes.has('toughness'):
-                    stat += "(|yToughness: {:>2d}|n)".format(item.db.toughness)
+                if item.attributes.has('mass'):
+                    stat += "(|rWeight: {:}|n) ".format(item.db.mass)
+                if item.attributes.has('values'):
+                    stat += "(|yValue: {:}|n)".format(item.db.value)
+                if item.attributes.has('hp'):
+                    stat += "(|yDurability: {:}|n) ".format(item.db.hp)
+                if item.attributes.has('physical_armor_value'):
+                    stat += "(|yPhysical Armor: {:}|n) ".format(item.db.physical_armor_value)
+                if item.attributes.has('mental_armor_value'):
+                    stat += "(|yMental Armor: {:}|n) ".format(item.db.mental_armor_value)
                 if item.attributes.has('range'):
-                    stat += "(|G{}|n) ".format(item.db.range.capitalize())
+                    stat += "(|yRange: {:}|n) ".format(item.db.range)
+                if item.attributes.has('damage'):
+                    stat += "(|yDamage: {:}|n) ".format(item.db.damage)
 
                 data.append(
                     "  |b{slot:>{swidth}.{swidth}}|n: {item:<20.20} {stat}".format(
@@ -274,6 +282,7 @@ class CmdWield(MuxCommand):
                                args=' '.join((sw, args)),
                                item=obj,
                                action='wield')
+            caller.msg("Don't forget to set your default attack. Help default.")
         else:
             caller.msg("You can't wield {}.".format(
                 obj.get_display_name(caller)))

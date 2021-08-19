@@ -15,11 +15,10 @@ def control_progression_funcs(character):
     """
     Call all of the progression functions as needed, in the right order.
     """
-    log_file("calling ability score progression", filename='progression.log')
+    log_file(f"calling ability progression funcs for {character.name}", \
+             filename='progression.log')
     check_ability_score_progression(character)
-    log_file("calling trait progression", filename='progression.log')
     check_trait_progression(character)
-    log_file("calling talent progression", filename='progression.log')
     check_talent_progression(character)
 
 

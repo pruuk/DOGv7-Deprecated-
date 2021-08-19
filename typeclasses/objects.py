@@ -174,4 +174,4 @@ class Object(DefaultObject):
 
     def at_object_creation(self):
         "Run only once, at object creation"
-        pass
+        self.db.mass = 0

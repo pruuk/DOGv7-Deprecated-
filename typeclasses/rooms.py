@@ -46,7 +46,11 @@ class Room(DefaultRoom):
         # maximum number of tracks to store. Some terrain allows for tracks to
         # be readable even with a large amount of foot traffic.
         self.traits.add(key="trackmax", name="Maximum Readable Tracks", \
-                        type="static", base=20) # default of 20
+                        type="static", base=(round(self.traits.size.actual / 500))) # default of 20
+        # add encumberance to room to limit the amount of junk that can be
+        # dropped in a given room
+        self.traits.add(key="enc", name="Encumberance", type='counter', \
+                        base=0, max=(self.traits.size.actual * 10))
         # boolean info attributes of the room
         self.db.info = {'Non-Combat Room': False, 'Outdoor Room': True, \
                         'Zone': None, 'Environment Type': None}
@@ -111,6 +115,8 @@ class Room(DefaultRoom):
                                                 item.ability_scores.Per))
                         if notice_roll <= sneak_roll:
                             item.at_char_entered(obj)
+        else:
+            self.calculate_encumberance()
 
 
     # apply tracks as character or NPC leaves the room
@@ -125,3 +131,36 @@ class Room(DefaultRoom):
                 obj.traits.sp.current -= (self.traits.rot.actual * self.traits.size.actual / 100)
             # also refresh the prompt
             obj.execute_cmd("rprom")
+        else:
+            self.calculate_encumberance()
+
+
+    def calculate_encumberance(self):
+        """
+        This function will determine how encumbered the object is based upon
+        carried weight and their strength. Encumberance will affect how much
+        stamina it costs to move, fight, etc...
+
+        Equipped items will not count against encumberance as much as 'loose'
+        items in inventory. Certain containers and bags will also reduce
+        encmberance.
+        """
+        log_file(f"start of status encumberance calc func for {self.name}", \
+                 filename='room.log')
+        self.traits.enc.current = 0
+        items = self.contents
+        log_file(f"Contents of room: {items}", \
+                 filename='room.log')
+        for item in items:
+            log_file(f"calculating mass for {item.name}", \
+                     filename='room.log')
+            if utils.inherits_from(item, 'typeclasses.npcs.NPC') or utils.inherits_from(item, 'typeclasses.characters.Character'):
+                log_file(f"Item is a char or NPC- mass:{item.traits.mass.actual}", \
+                         filename='room.log')
+                self.traits.enc.current += item.traits.mass.actual
+            elif utils.inherits_from(item, 'typeclasses.exits.Exit'):
+                pass
+            else:
+                log_file(f"Item is a regular item- mass:{item.db.mass}", \
+                         filename='room.log')
+                self.traits.enc.current += item.db.mass

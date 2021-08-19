@@ -19,14 +19,13 @@ class Armor(Equippable):
         mental_armor_value (int): primary defensive stat for mental hits
 
     """
-    toughness = 0
     slots = [] # slot will need to be added at object creation
     mass = 3
 
     def at_object_creation(self):
         super(Armor, self).at_object_creation()
-        self.db.physical_armor_value = 1 # default value
-        self.db.mental_armor_value = 0 # default value
+        self.db.physical_armor_value = 1 # default value. This is a multiplier!
+        self.db.mental_armor_value = 1 # default value. This is a multiplier!
 
     def at_equip(self, character):
         pass
@@ -36,7 +35,7 @@ class Armor(Equippable):
 
 class Shield(Armor):
     """Typeclass for shield prototypes."""
-    slots = ['wield1', 'wield2']
+    slots = ['main hand', 'off hand']
     multi_slot = False
     mass = 8
 

@@ -6,6 +6,9 @@ from typeclasses.objects import Object
 from evennia import create_object
 from evennia.prototypes.spawner import spawn
 from world.traits import TraitHandler
+from evennia.utils.logger import log_file
+from evennia.utils import lazy_property
+from world.traits import TraitHandler
 
 class Item(Object):
     """
@@ -17,12 +20,17 @@ class Item(Object):
     value = 1 # default value in copper coins
     mass = 0.5 # default mass in kilograms
 
+    @lazy_property
+    def traits(self):
+        """TraitHandler that manages room traits."""
+        return TraitHandler(self)
+
     def at_object_creation(self):
         "Only called at creation and forced update"
         super(Item, self).at_object_creation()
         self.locks.add(";".join(("puppet:perm(Builder)",
                                  "equip:false()",
-                                 "get:true()"
+                                 "get:all()"
                                  )))
         self.db.value = self.value
         self.db.mass = float(self.mass)
@@ -33,12 +41,21 @@ class Item(Object):
         Called when a character or NPC tries to get the item. Checks to see if
         adding this amount of weight will make the character/NPC overencumbered.
         """
+        log_file(f"trying to move {self.key} to {getter.name}", filename='item_moves.log')
         if getter.traits.enc.current + self.db.mass > getter.traits.enc.max:
             # this item is too heavy for the getter to pick up, cancel move
+            log_file(f"{self.name} is too heavy for {getter.name} to pick up.", \
+                     filename='item_moves.log')
             getter.msg(f"{self.name} is too heavy for you to pick up.")
             return False
         else:
+            log_file(f"{getter.name} calculating new enc value.", \
+                     filename='item_moves.log')
             getter.calculate_encumberance()
+            log_file(f"{getter.name} Enc: {getter.traits.enc.current}", \
+                     filename='item_moves.log')
+            return True
+
 
     def at_get(self, getter):
         "Called just after getter picks up the object"

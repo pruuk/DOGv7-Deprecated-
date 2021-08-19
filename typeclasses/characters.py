@@ -98,7 +98,7 @@ class Character(DefaultCharacter):
                         (self.ability_scores.Vit.current)), extra={'learn' : 0})
         self.traits.add(key="mass", name="Mass", type='static', \
                         base=rarsc(180, dist_shape='very flat'), extra={'learn' : 0})
-        self.traits.add(key="enc", name="Encumberance", type='static', \
+        self.traits.add(key="enc", name="Encumberance", type='counter', \
                         base=0, max=(self.ability_scores.Str.current * .5), extra={'learn' : 0})
         # apply the initial mutations and talents. Most mutations will be set
         # to zero, as will many talents
@@ -111,7 +111,7 @@ class Character(DefaultCharacter):
                           ('torso', ('chest', 'back', 'waist', 'quiver')), \
                           ('arms', ('shoulders', 'arms', 'hands', 'ring')), \
                           ('legs', ('legs', 'feet')), \
-                          ('weapon', ('wield1', 'wield2')) )
+                          ('weapon', ('main hand', 'off hand')) )
         # define slots that go with the limbs.
         # TODO: Write a function for changing slots if/when mutations cause
         # new limbs to be grown or damage causes them to be lost
@@ -130,8 +130,8 @@ class Character(DefaultCharacter):
             'ring': None,
             'legs': None,
             'feet': None,
-            'wield1': None,
-            'wield2': None
+            'main hand': None,
+            'off hand': None
         }
         # Add in info db to store other useful tidbits we'll need
         self.db.info = {'Target': None, 'Mercy': True, 'Default Attack': 'unarmed_strike', \
@@ -160,6 +160,7 @@ class Character(DefaultCharacter):
         """
         log_file(f"start of status encumberance calc func for {self.name}", \
                  filename='combat_step.log')
+        self.traits.enc.current = 0
         items = self.contents
         for item in items:
             if item.db.used_by == self:
@@ -264,6 +265,23 @@ class Character(DefaultCharacter):
                                 self.talents.footwork)) / 100
 
 
+    def calculate_equipment_bonuses(self):
+        """
+        Runs calculations for bonuses due to equipped items.
+        """
+        self.ndb.eq_damage = 1
+        self.ndb.eq_phy_arm = 1
+        self.ndb.eq_men_arm = 1
+        for slot, item in self.db.slots.items():
+            if item != None:
+                if item.attributes.has('physical_armor_value'):
+                    self.ndb.eq_phy_arm *= item.db.physical_armor_value
+                if item.attributes.has('mental_armor_value'):
+                    self.ndb.eq_men_arm *= item.db.mental_armor_value
+                if item.attributes.has('damage'):
+                    self.ndb.eq_damage *= item.db.damage
+
+
     def populate_num_combat_actions(self):
         """
         Rolls to determine the number of actions the character can perform during
@@ -356,7 +374,6 @@ class Character(DefaultCharacter):
         self.traits.hp.current += hp_regen_roll
         self.traits.sp.current += sp_regen_roll
         self.traits.cp.current += cp_regen_roll
-        self.execute_cmd("rprom")
 
 
     def at_heartbeat_tick_do_progression_checks(self):
@@ -528,42 +545,56 @@ class Character(DefaultCharacter):
         """
         if self.db.info['Title'] is not None:
             if len(self.db.info['Title']) < 25:
-                name_and_title = str(self.name) + self.db.info['Title']
+                name_and_title = "\t" + str(self.name) + self.db.info['Title']
         else:
-            name_and_title = str(self.name)
-        funds = f"Gold: {self.db.wallet['GC']} Silver: {self.db.wallet['SC']} Copper: {self.db.wallet['CC']}"
+            name_and_title = "\t\t\t\t" + str(self.name)
+        name_and_title = f"|h|w{name_and_title}|n"
+        funds = f"|551Gold:|n {self.db.wallet['GC']}    |445Silver:|n {self.db.wallet['SC']}    |530Copper:|n {self.db.wallet['CC']}"
         # NOTE: money stored in self.db.wallet
-        att_table = evtable.EvTable("Attribute", "Value",
+        att_table = evtable.EvTable("|035Attribute|n", "|wValue|n",
                         table = [
                             ["Health", "Stamina", "Conviction", "Dexterity", \
-                             "Strength", "Vitality", "Perception", "Charisma"],
+                             "Strength", "Vitality", "Perception", "Charisma", \
+                             "Weight"],
                             [(str(int(self.traits.hp.current)) + " / " + str(self.traits.hp.max) ), \
                              (str(int(self.traits.sp.current)) + " / " + str(self.traits.sp.max) ), \
                              (str(int(self.traits.cp.current)) + " / " + str(self.traits.cp.max ) ), \
                              self.ability_scores.Dex.current, self.ability_scores.Str.current, \
                              self.ability_scores.Vit.current, self.ability_scores.Per.current, \
-                             self.ability_scores.Cha.current]],
+                             self.ability_scores.Cha.current, self.traits.mass.current]],
                              align='c', border="incols")
         # get top talents in a simplified dictionary converted to a list of
         # names and a list of scores
         talent_names, talent_scores = self.get_top_talents()
-        talent_table = evtable.EvTable("Talent", "Value",
+        talent_table = evtable.EvTable("|530Talent|n", "|wValue|n",
                         table = [
                             talent_names,
                             talent_scores],
                             align='c', border="incols")
-        info_table = evtable.EvTable("Info", "Value",
+        # reformat default attack names so they're friendlier for the character
+        # sheet
+        if self.db.info["Default Attack"] == "unarmed_strike":
+            datt = 'Strikes'
+        elif self.db.info["Default Attack"] == "melee_weapon_strike":
+            datt = 'Melee Weapon'
+        elif self.db.info["Default Attack"] == "ranged_weapon_strike":
+            datt = 'Ranged Weapon'
+        elif self.db.info["Default Attack"] == "mental_attack":
+            datt = 'Psi'
+        else:
+            datt = self.db.info["Default Attack"].capitalize()
+        info_table = evtable.EvTable("|530Info|n", "|wValue|n",
                         table = [
                                 ["Default Attack", "Mercy", "Wimpy", "Yield", \
                                  "Sneaking"], \
-                                [self.db.info["Default Attack"], self.db.info["Mercy"], \
+                                [datt, self.db.info["Mercy"], \
                                  self.db.info["Wimpy"], self.db.info["Yield"], \
                                  self.db.info["Sneaking"]]],
                                  align='c', border="incols")
         # get the top mutations in a simplified dictionary converted to a list of
         # names and a list of scores
         mut_names, mut_scores = self.get_top_mutations()
-        mutations_table = evtable.EvTable("Talent", "Value",
+        mutations_table = evtable.EvTable("|035Mutation|n", "|wValue|n",
                         table = [
                             mut_names,
                             mut_scores],
@@ -595,3 +626,17 @@ class Character(DefaultCharacter):
         mut_names = list(top_mutations_dict.keys())
         mut_scores = list(top_mutations_dict.values())
         return mut_names, mut_scores
+
+
+    # prevent movement into a room if the room is full. This is done using an
+    # encumberance trait counter on rooms, just like the one on CharacterCmdSet
+    def at_before_move(self, getter):
+        """
+        Called when a character or NPC tries to move into a room.
+        """
+        if getter.traits.enc.current + self.traits.mass.actual > getter.traits.enc.max:
+            # room is full, cancel move
+            self.msg("That room has too many things and/or people in it. You can't enter right now.")
+            return False
+        else:
+            return True

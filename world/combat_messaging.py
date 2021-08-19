@@ -33,6 +33,7 @@ from world.combat_description import return_grappling_position_text as grappling
 from world.combat_description import return_grappling_unarmed_damage_normal_text as grudnt
 from world.combat_description import return_grappling_submission_text as rgsat
 from world.combat_description import return_grappling_escape_text as rgeat
+from world.combat_description import return_melee_weapon_strike_text as mwst
 from evennia.utils.logger import log_file
 
 ## functions for delivering messages
@@ -213,7 +214,7 @@ def build_msgs_for_grappling_improve_position(attacker, defender):
     final_text_dict = grappling_pos_txt(pcs_and_npcs_in_room)
     log_file(f"text dict: {final_text_dict}", filename='combat_step.log')
     actor_msg_string = f"You |110{final_text_dict['Actor']}|n {defender.name}, ending with you in {attacker.db.info['Position']}"
-    actee_msg_string = f"|110{final_text_dict['Actee']}|n, ending with you in {defender.db.info['Position']}"
+    actee_msg_string = f"{attacker.name} |110{final_text_dict['Actee']}|n, ending with you in {defender.db.info['Position']}"
     observer_msg_string = f"{attacker.name} |110{final_text_dict['Observer']}|n, ending with {defender.name} in {defender.db.info['Position']}"
     send_msg_to_objects(pcs_and_npcs_in_room, actor_msg_string, actee_msg_string, observer_msg_string)
 
@@ -267,4 +268,21 @@ def build_msgs_for_grappling_escape(attacker, defender, success):
     actor_msg_string = f"You {final_text_dict['Actor']} against {defender.name}."
     actee_msg_string = f"{attacker.name} {final_text_dict['Actee']}."
     observer_msg_string = f"{attacker.name} {final_text_dict['Observer']}."
+    send_msg_to_objects(pcs_and_npcs_in_room, actor_msg_string, actee_msg_string, observer_msg_string)
+
+
+def build_msgs_for_melee_weapon_strikes(attacker, defender, damage):
+    """
+    This function returns the combat messaging for melee weapon strike attempts.
+    """
+    log_file("start of build msgs for melee weapon strike func", \
+             filename='combat_step.log')
+    pcs_and_npcs_in_room = determine_objects_in_room(attacker.location, attacker, defender)
+    log_file(f"Room occupants: {pcs_and_npcs_in_room}", filename='combat_step.log')
+    final_text_dict, hit_loc, damage_text = mwst(pcs_and_npcs_in_room, damage)
+    log_file(f"text dict: {final_text_dict} hit loc: {hit_loc} Dam text: {damage_text}", \
+             filename='combat_step.log')
+    actor_msg_string = f"You |411{final_text_dict['Actor']}|n {defender.name}. Their |h|!W{hit_loc}|n is {damage_text}."
+    actee_msg_string = f"{attacker.name} |411{final_text_dict['Actee']}|n you. Your |h|!W{hit_loc}|n is {damage_text}."
+    observer_msg_string = f"{attacker.name} |411{final_text_dict['Observer']}|n {defender.name}'s |h|!W{hit_loc}|n, which is {damage_text}."
     send_msg_to_objects(pcs_and_npcs_in_room, actor_msg_string, actee_msg_string, observer_msg_string)

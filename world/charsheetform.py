@@ -10,40 +10,38 @@ FORMCHAR = "x"
 TABLECHAR = "c"
 
 FORM = """
-.--------------------------------------------------------------------------------.
-|                                                                                |
-| Character sheet for: xxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxx                  |
-|                                                                                |
-->------------------------------------------------------------------------------<-
-|                            |                                                   |
-|         Attributes:        |           Top Talents:                            |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  ccccc2cccccccccccccccccc  |  ccccc3ccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|                            |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|                            |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|                            |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|                            |  ccccccccccccccccccccccccccccccccccccccccccccccc  |
-|                            |                                                   |
-+--------------------------------------------------------------------------------+
-|                                  |                                             |
-|           Info:                  |            Mutations:                       |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|  ccccc4cccccccccccccccccccccccc  |  ccccc5ccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|  cccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
-|                                  |                                             |
-+--------------------------------------------------------------------------------+
-| Money -- xxxxxx6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    |
-+--------------------------------------------------------------------------------+
+.-------------------------------------------------------------------------------------.
+|                                                                                     |
+|                   xxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxx                 |
+|                                                                                     |
+->-----------------------------------------------------------------------------------<-
+|                             |                                                       |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  ccccc2cccccccccccccccccc   |   ccccc3cccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|  cccccccccccccccccccccccc   |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|                             |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|                             |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|                             |   cccccccccccccccccccccccccccccccccccccccccccccccc    |
+|                             |                                                       |
++-------------------------------------------------------------------------------------+
+|                                       |                                             |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|  ccccc4ccccccccccccccccccccccccccccc  |  ccccc5ccccccccccccccccccccccccccccccccccc  |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|  ccccccccccccccccccccccccccccccccccc  |  ccccccccccccccccccccccccccccccccccccccccc  |
+|                                       |                                             |
++-------------------------------------------------------------------------------------+
+| |GMoney|n -- xxxxxx6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    |
++-------------------------------------------------------------------------------------+
 """
